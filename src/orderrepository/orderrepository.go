@@ -1,17 +1,16 @@
 package orderrepositry
 
-import "order"
+import (
+	"Go-heisen/src/order"
+	"Go-heisen/src/readrequest"
+)
 
 // type RepoReader string // TODO: Implement
 
-// ReadRequest serves as a request to read an order
-type ReadRequest struct {
-	orderID string
-	reader  string // TODO: Make own type for this
-}
-
 // OrderRepository is the single source of truth of all known orders in all nodes.
-func OrderRepository(readRequestChan chan ReadRequest,
-	buttonPushChan chan order.Order) {
-
+func OrderRepository(readRequestChan chan readrequest.ReadRequest,
+	orderReceiverChan chan order.Order,
+	buttonPushChan chan order.Order,
+	arrivedFloorChan chan order.Order,
+	watchdogChan chan order.Order) {
 }
