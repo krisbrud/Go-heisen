@@ -9,9 +9,13 @@ import (
 // ArrivedFloorHandler handles clearing of orders when arriving at a destination floor
 func ArrivedFloorHandler(
 	stateUpdates chan elevatorstate.ElevatorState,
-	readReqChan chan readrequest.ReadRequest,
+	repoReadRequests chan readrequest.ReadRequest,
 	fromOrderRepo chan order.Order,
-	toOrderReceiver chan order.Order,
+	toOrderProcessor chan order.Order,
 ) {
+	// Remember to differentiate between cab and hall orders when clearing!
 
+	for {
+		select {}
+	}
 }

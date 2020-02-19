@@ -2,4 +2,4 @@ package orderserializer
 
 // TODO:
 // Serialize(o Order) string
-// Deserialize(o order) string
+// Deserialize(serialized string) string

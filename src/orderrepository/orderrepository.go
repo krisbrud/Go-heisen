@@ -8,9 +8,12 @@ import (
 // type RepoReader string // TODO: Implement
 
 // OrderRepository is the single source of truth of all known orders in all nodes.
-func OrderRepository(readRequestChan chan readrequest.ReadRequest,
-	orderReceiverChan chan order.Order,
-	buttonPushChan chan order.Order,
-	arrivedFloorChan chan order.Order,
-	watchdogChan chan order.Order) {
+func OrderRepository(
+	readRequests chan readrequest.ReadRequest,
+	processorWrites chan order.Order,
+	processorReads chan order.Order,
+	buttonPushReads chan order.Order,
+	arrivedFloorReads chan order.Order,
+	watchdogReads chan order.Order,
+) {
 }

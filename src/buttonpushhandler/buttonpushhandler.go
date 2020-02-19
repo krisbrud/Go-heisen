@@ -7,10 +7,12 @@ import (
 
 // ButtonPushHandler checks if an order alre
 func ButtonPushHandler(
-	incomingOrderChan chan order.Order,
-	orderRepoReadChan chan order.Order,
-	readRequestChan chan readrequest.ReadRequest,
+	buttonPushOrders chan order.Order,
+	buttonRepoReads chan order.Order,
+	repoReadRequests chan readrequest.ReadRequest,
 	toDelegatorChan chan order.Order,
 ) {
-
+	for {
+		select {}
+	}
 }
