@@ -1,0 +1,21 @@
+package arrivedfloorhandler
+
+import (
+	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/order"
+	"Go-heisen/src/readrequest"
+)
+
+// ArrivedFloorHandler handles clearing of orders when arriving at a destination floor
+func ArrivedFloorHandler(
+	stateUpdates chan elevatorstate.ElevatorState,
+	repoReadRequests chan readrequest.ReadRequest,
+	fromOrderRepo chan order.Order,
+	toOrderProcessor chan order.Order,
+) {
+	// Remember to differentiate between cab and hall orders when clearing!
+
+	for {
+		select {}
+	}
+}
