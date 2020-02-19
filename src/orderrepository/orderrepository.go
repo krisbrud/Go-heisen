@@ -1,4 +1,4 @@
-package orderrepositry
+package orderrepository
 
 import (
 	"Go-heisen/src/order"
@@ -16,4 +16,7 @@ func OrderRepository(
 	arrivedFloorReads chan order.Order,
 	watchdogReads chan order.Order,
 ) {
+	for {
+		select {}
+	}
 }
