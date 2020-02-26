@@ -11,7 +11,6 @@ import (
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/orderrepository"
-	"Go-heisen/src/readrequest"
 	"Go-heisen/src/watchdog"
 	"fmt"
 	"time"
@@ -31,19 +30,9 @@ func main() {
 }
 
 func startSystem(restartSystem chan bool) {
-	/*
-		TODO
-		Declare channels
-		Make restart-system (with channel)
-		Start goroutines
-	*/
-
-	/*
-		TODO Channels
-	*/
-	restart := make(chan bool)
 
 	// Declare channels, organized after who reads them
+	restart := make(chan bool)
 
 	// ArrivedFloorHandler
 	arrivedStateUpdates := make(chan elevatorstate.ElevatorState)
@@ -58,7 +47,7 @@ func startSystem(restartSystem chan bool) {
 	// LightManager
 	toLightManager := make(chan order.Order)
 	// OrderRepository
-	repoReadRequests := make(chan readrequest.ReadRequest)
+	repoReadRequests := make(chan orderrepository.ReadRequest)
 	processorRepoWrites := make(chan order.Order)
 	// OrderProcessor
 	toOrderProcessor := make(chan order.Order)

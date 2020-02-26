@@ -2,32 +2,26 @@ package orderrepository
 
 import (
 	"Go-heisen/src/order"
-	"Go-heisen/src/readrequest"
 	"testing"
 )
 
 func TestOrderRepository(t *testing.T) {
-	unused := make(chan order.Order)
-	orderProcessorReads := make(chan order.Order)
-	orderProcessorWrites := make(chan order.Order)
-	readRequests := make(chan readrequest.ReadRequest)
+	readSingleRequests := make(chan ReadRequest)
+	readAllRequests := make(chan ReadRequest)
+	writeRequests := make(chan WriteRequest)
 
-	go OrderRepository(readRequests, orderProcessorWrites, orderProcessorReads, unused, unused, unused)
+	go OrderRepository(readSingleRequests, readAllRequests, writeRequests)
 
 	nonExistingID := "Non-existent;)"
-	myReadReq := readrequest.ReadRequest{
-		nonExistingID,
-		readrequest.OrderProcessor,
-	}
+	myReadReq := MakeReadRequest(nonExistingID)
 
-	readRequests <- myReadReq
+	readSingleRequests <- myReadReq
 
-	if result := <-orderProcessorReads; result.IsValid() {
+	if result := <-myReadReq.ResponseCh; result.IsValid() {
 		t.Errorf("Order that should not exist exists!: %v", result)
 	}
 
 	// Test writing some order and reading it back
-
 	someOrder := order.Order{
 		"Some ID",
 		1,
@@ -36,18 +30,21 @@ func TestOrderRepository(t *testing.T) {
 		false,
 	}
 
-	orderProcessorWrites <- someOrder
+	someWriteReq := WriteRequest{
+		someOrder,
+		make(chan bool),
+	}
+	writeRequests <- someWriteReq
+	<-someWriteReq.successCh
 
-	readRequests <- readrequest.ReadRequest{
-		OrderID: someOrder.OrderID,
-		Reader:  readrequest.OrderProcessor,
+	someReadRequest := MakeReadRequest(someOrder.OrderID)
+	readSingleRequests <- someReadRequest
+
+	if result := <-someReadRequest.ResponseCh; result != someOrder {
+		t.Errorf(" <- someOrderDid not get expected order when reading!: %v", result)
 	}
 
-	if result := <-orderProcessorReads; result != someOrder {
-		t.Errorf("Did not get expected order when reading!: %v", result)
-	}
-
-	// Write another order to same ID, see if it is overwritten
+	// Write another order to same ID, should overwrite
 	someOtherOrder := order.Order{
 		"Some ID",
 		2,
@@ -56,11 +53,21 @@ func TestOrderRepository(t *testing.T) {
 		false,
 	}
 
-	orderProcessorWrites <- someOtherOrder
+	someOtherWriteReq := WriteRequest{
+		someOtherOrder,
+		make(chan bool),
+	}
 
-	readRequests <- readrequest.ReadRequest{someOrder.OrderID, readrequest.OrderProcessor}
+	writeRequests <- someOtherWriteReq
+	<-someOtherWriteReq.successCh
 
-	if result := <-orderProcessorReads; result == someOrder {
-		t.Errorf("Did not get expected order when reading after rewrite!: %v", result)
+	someOtherReadReq := ReadRequest{
+		someOtherOrder.OrderID,
+		make(chan order.Order),
+	}
+	readSingleRequests <- someOtherReadReq
+
+	if result := <-someOtherReadReq.ResponseCh; result != someOtherOrder {
+		t.Errorf("Did not get expected order when reading after overwrite!: %v", result)
 	}
 }
