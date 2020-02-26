@@ -50,8 +50,11 @@ func OrderRepository(
 			close(readReq.ErrorCh)
 
 		case readReq := <-readAllActiveRequests:
+			// Read back all orders on the request
 			for _, storedOrder := range allOrders {
+				if !storedOrder.Completed {
 
+				}
 			}
 
 		case writeReq := <-writeRequests:
