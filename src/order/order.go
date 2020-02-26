@@ -44,5 +44,13 @@ func (o Order) IsMine() bool {
 	return true // TODO: Update this
 }
 
+func (o Order) IsFromHall() bool {
+	return o.Class == HALL_UP || o.Class == HALL_DOWN
+}
+
+func (o Order) IsFromCab() bool {
+	return o.Class == CAB
+}
+
 // TODO:
 // isMine() bool

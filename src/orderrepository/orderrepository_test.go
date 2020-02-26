@@ -2,6 +2,7 @@ package orderrepository
 
 import (
 	"Go-heisen/src/order"
+	"Go-heisen/src/testutils"
 	"testing"
 )
 
@@ -22,20 +23,14 @@ func TestOrderRepository(t *testing.T) {
 	}
 
 	// Test writing some order and reading it back
-	someOrder := order.Order{
-		"Some ID",
-		1,
-		order.CAB,
-		"Some recipent",
-		false,
-	}
+	someOrder := testutils.GetSomeOrder()
 
 	someWriteReq := WriteRequest{
 		someOrder,
 		make(chan bool),
 	}
 	writeRequests <- someWriteReq
-	<-someWriteReq.successCh
+	<-someWriteReq.SuccessCh
 
 	someReadRequest := MakeReadRequest(someOrder.OrderID)
 	readSingleRequests <- someReadRequest
@@ -45,13 +40,7 @@ func TestOrderRepository(t *testing.T) {
 	}
 
 	// Write another order to same ID, should overwrite
-	someOtherOrder := order.Order{
-		"Some ID",
-		2,
-		order.CAB,
-		"Some other recipent",
-		false,
-	}
+	someOtherOrder := testutils.GetSomeOtherOrder()
 
 	someOtherWriteReq := WriteRequest{
 		someOtherOrder,
@@ -59,7 +48,7 @@ func TestOrderRepository(t *testing.T) {
 	}
 
 	writeRequests <- someOtherWriteReq
-	<-someOtherWriteReq.successCh
+	<-someOtherWriteReq.SuccessCh
 
 	someOtherReadReq := ReadRequest{
 		someOtherOrder.OrderID,

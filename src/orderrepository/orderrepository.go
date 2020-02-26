@@ -16,6 +16,9 @@ func MakeReadRequest(OrderID string) ReadRequest {
 	return ReadRequest{OrderID, make(chan order.Order)}
 }
 
+// MakeReadAllActiveRequest makes a ReadRequest that will read back all active orders
+func MakeReadAllActiveRequest() ReadRequest { return ReadRequest{"", make(chan order.Order)} }
+
 // MakeWriteRequest returns a WriteRequest with a success response channel
 func MakeWriteRequest(orderToWrite order.Order) WriteRequest {
 	return WriteRequest{orderToWrite, make(chan bool)}
