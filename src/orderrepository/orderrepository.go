@@ -2,53 +2,64 @@ package orderrepository
 
 import (
 	"Go-heisen/src/order"
-	"Go-heisen/src/readrequest"
-	"fmt"
 )
 
-// type RepoReader string // TODO: Implement
+// ReadRequest serves as a request to read an order from OrderRepository
+type ReadRequest struct {
+	OrderID    string
+	ResponseCh chan order.Order
+	ErrorCh    chan error
+}
+
+// WriteRequest makes it possible for other modules to write to OrderRepository
+type WriteRequest struct {
+	OrderToWrite order.Order
+	ErrorCh      chan error
+}
+
+// The InvalidRepoRequestError is returned on ErrorCh in ReadRequest or WriteRequest if something is wrong.
+type InvalidRepoRequestError struct {
+	why string
+}
+
+func (e InvalidRepoRequestError) Error() string { return e.why }
 
 // OrderRepository is the single source of truth of all known orders in all nodes.
 func OrderRepository(
-	readRequests chan readrequest.ReadRequest,
-	processorWrites chan order.Order,
-	processorReads chan order.Order,
-	buttonPushReads chan order.Order,
-	arrivedFloorReads chan order.Order,
-	watchdogReads chan order.Order,
+	readSingleRequests chan ReadRequest,
+	readAllActiveRequests chan ReadRequest,
+	writeRequests chan WriteRequest,
 ) {
 	allOrders := make(map[string]order.Order)
 
 	for {
 		select {
-		case readReq := <-readRequests:
-			fmt.Println(readReq)
+		case readReq := <-readSingleRequests:
 			storedOrder, ok := allOrders[readReq.OrderID]
 
-			if !ok {
+			if ok {
+				readReq.ErrorCh <- nil
+			} else {
 				// Order does not exist, inform Reader by sending invalid order back
 				storedOrder = order.NewInvalidOrder()
+				readReq.ErrorCh <- InvalidRepoRequestError{"Order with ID: " + readReq.OrderID + " already exists."}
 			}
 
-			switch readReq.Reader {
-			case readrequest.OrderProcessor:
-				processorReads <- storedOrder
-			case readrequest.ButtonPushHandler:
-				buttonPushReads <- storedOrder
-			case readrequest.ArrivedFloorHandler:
-				arrivedFloorReads <- storedOrder
-			case readrequest.Watchdog:
-				watchdogReads <- storedOrder
-			default:
-				fmt.Printf("ERROR! Unknown reader: %v", readReq.Reader)
+			readReq.ResponseCh <- storedOrder
+			close(readReq.ResponseCh)
+			close(readReq.ErrorCh)
+
+		case readReq := <-readAllActiveRequests:
+			for _, storedOrder := range allOrders {
 
 			}
 
-		case orderToWrite := <-processorWrites:
-			if orderToWrite.IsValid() {
-				allOrders[orderToWrite.OrderID] = orderToWrite
+		case writeReq := <-writeRequests:
+			if writeReq.OrderToWrite.IsValid() {
+				allOrders[writeReq.OrderToWrite.OrderID] = writeReq.OrderToWrite
+				writeReq.ErrorCh <- nil
 			} else {
-				fmt.Printf("Trying to print invalid order: %v", orderToWrite)
+				writeReq.ErrorCh <- InvalidRepoRequestError{"Trying to write invalid order."}
 			}
 		}
 	}
