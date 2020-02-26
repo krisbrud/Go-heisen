@@ -2,49 +2,58 @@ package orderprocessor
 
 import (
 	"Go-heisen/src/order"
-	"Go-heisen/src/readrequest"
+	"Go-heisen/src/orderrepository"
+	"fmt"
 )
 
 // OrderProcessor processes an incoming order from this or other elevators
 func OrderProcessor(
 	incomingOrdersChan chan order.Order,
-	orderTxChan chan order.Order,
-	readRequestChan chan readrequest.ReadRequest,
-	orderRepoRead chan order.Order,
-	orderRepoWriteChan chan order.Order,
+	singleReadRequests chan orderrepository.ReadRequest,
+	repoWriteRequests chan orderrepository.WriteRequest,
 	toController chan order.Order,
-	toLightManager chan order.Order,
+	toTransmitter chan order.Order,
 ) {
 	for {
 		select {
 		case incomingOrder := <-incomingOrdersChan:
-			if incomingOrder.IsValid() {
-				// Check OrderRepository for order with same ID:
-				readReq := readrequest.ReadRequest{
-					OrderID: incomingOrder.OrderID,
-					Reader:  readrequest.OrderProcessor}
-				readRequestChan <- readReq
+			go func() {
+				if !incomingOrder.IsValid() {
+					return // Ignore the incoming order
+				}
 
-				if localOrder := <-orderRepoRead; localOrder.IsValid() {
+				// Check OrderRepository for order with same ID:
+				readReq := orderrepository.MakeReadRequest(incomingOrder.OrderID)
+				singleReadRequests <- readReq
+
+				if localOrder := <-readReq.ResponseCh; localOrder.IsValid() {
+					// Order exists in OrderRepository.
 					switch {
 					case localOrder.Completed && !incomingOrder.Completed:
 						// Notify other nodes that order is actually completed.
 						// Don't update the OrderRepository, local state is newer.
-						orderTxChan <- localOrder
+						toTransmitter <- localOrder
 					case !localOrder.Completed && incomingOrder.Completed:
-						// Overwrite existing order as completed. Update lights.
-						orderRepoWriteChan <- incomingOrder
-
-					}
-				} else {
-					// Incoming order is new. Register to OrderRepository.
-					orderRepoWriteChan <- incomingOrder
-					if incomingOrder.IsMine() {
+						// Overwrite existing order as completed. Update controller.
+						writeReq := orderrepository.MakeWriteRequest(incomingOrder)
+						repoWriteRequests <- writeReq
+						if !<-writeReq.SuccessCh {
+							fmt.Println("Error: Could not overwrite order to repo for some reason!")
+						}
 						toController <- incomingOrder
 					}
-					toLightManager <- incomingOrder // Update lights
+				} else {
+					// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
+					writeReq := orderrepository.MakeWriteRequest(incomingOrder)
+					repoWriteRequests <- writeReq
+					if !<-writeReq.SuccessCh {
+						fmt.Println("Error: Could not write new order to repo for some reason!")
+					}
+
+					toController <- incomingOrder
+					toTransmitter <- incomingOrder
 				}
-			}
+			}()
 		}
 	}
 }
