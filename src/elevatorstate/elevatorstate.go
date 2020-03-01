@@ -5,10 +5,10 @@ type RelativePosition int
 
 // The possible relative positions
 const (
-	AtFloor    RelativePosition = iota
-	OverFloor  RelativePosition = iota
-	UnderFloor RelativePosition = iota
-	Undefined  RelativePosition = iota
+	AtFloor RelativePosition = iota
+	OverFloor
+	UnderFloor
+	Undefined
 )
 
 const (
@@ -17,16 +17,40 @@ const (
 	TopFloor    = BottomFloor + NumFloors - 1 // BottomFloor is a valid floor
 )
 
+type Direction int
+
+const (
+	Up Direction = iota // TODO: get rid off
+	Down
+	Idle
+)
+
 type ElevatorState struct {
 	CurrentFloor int
-	RelPos       RelativePosition
+	AtFloor      bool
+	IntendedDir  Direction
 }
 
 // TODO: Allow any floors
 
 // IsValid tells us if both fields of ElevatorState are valid given the current configuration
 func (es ElevatorState) IsValid() bool {
-	return BottomFloor <= es.CurrentFloor && es.CurrentFloor <= TopFloor && es.RelPos != Undefined
+	return BottomFloor <= es.CurrentFloor && es.CurrentFloor <= TopFloor
 }
 
-func (es ElevatorState) IsAtFloor() bool { return es.RelPos == AtFloor }
+func (es ElevatorState) IsAtFloor() bool { return es.AtFloor }
+
+func (dir Direction) Opposite() Direction {
+	switch dir {
+	case Up:
+		return Down
+	case Down:
+		return Up
+	default:
+		return Idle // TODO Maybe invalid?
+	}
+}
+
+func MakeInvalidState() ElevatorState {
+	return ElevatorState{BottomFloor - 1, false, Idle}
+}
