@@ -3,6 +3,7 @@ package orderprocessor
 import (
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
+	"Go-heisen/src/testutils"
 	"testing"
 )
 
@@ -18,7 +19,7 @@ func TestOrderProcessor(t *testing.T) {
 	go OrderProcessor(incomingOrdersChan, singleReadRequests, writeRequests, toController, toTransmitter)
 
 	// Send a new, valid order to the OrderProcessor
-	newOrder := order.Order{"Some ID", 2, order.CAB, "SomeElevator", false}
+	newOrder := testutils.GetSomeOrder()
 	incomingOrdersChan <- newOrder
 
 	// Read the order back from OrderRepository to check that it was written correctly
