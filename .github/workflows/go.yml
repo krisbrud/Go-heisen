@@ -23,7 +23,7 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
-        apt-get install make -y
+        sudo apt install make -y
 
     - name: run tests
       run: make test
