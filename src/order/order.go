@@ -40,5 +40,9 @@ func (o Order) IsValid() bool {
 	return o.OrderID != invalidOrderID || o.Floor != invalidFloor || o.Class != invalidClass
 }
 
+func (o Order) IsMine() bool {
+	return true // TODO: Update this
+}
+
 // TODO:
 // isMine() bool

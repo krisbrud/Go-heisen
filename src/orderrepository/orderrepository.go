@@ -16,10 +16,15 @@ func MakeReadRequest(OrderID string) ReadRequest {
 	return ReadRequest{OrderID, make(chan order.Order)}
 }
 
+// MakeWriteRequest returns a WriteRequest with a success response channel
+func MakeWriteRequest(orderToWrite order.Order) WriteRequest {
+	return WriteRequest{orderToWrite, make(chan bool)}
+}
+
 // WriteRequest makes it possible for other modules to write to OrderRepository
 type WriteRequest struct {
 	OrderToWrite order.Order
-	successCh    chan bool
+	SuccessCh    chan bool
 }
 
 // OrderRepository is the single source of truth of all known orders in all nodes.
@@ -60,9 +65,9 @@ func OrderRepository(
 		case writeReq := <-writeRequests:
 			if writeReq.OrderToWrite.IsValid() {
 				allOrders[writeReq.OrderToWrite.OrderID] = writeReq.OrderToWrite
-				go func() { writeReq.successCh <- true }() // Don't wait for successCh to be read
+				go func() { writeReq.SuccessCh <- true }() // Don't wait for SuccessCh to be read
 			} else {
-				go func() { writeReq.successCh <- false }()
+				go func() { writeReq.SuccessCh <- false }()
 			}
 		}
 	}
