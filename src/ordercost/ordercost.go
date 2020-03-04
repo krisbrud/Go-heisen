@@ -21,13 +21,6 @@ const (
 	maxCost = elevatorstate.NumFloors * 10
 )
 
-func distance(a, b int) int {
-	if a < b {
-		return b - a
-	}
-	return a - b
-}
-
 func Cost(o order.Order, es elevatorstate.ElevatorState) int {
 	if !o.IsValid() || !o.IsMine() || !es.IsValid() {
 		// TODO panic/restart
@@ -50,6 +43,13 @@ func Cost(o order.Order, es elevatorstate.ElevatorState) int {
 	return distance(o.Floor, es.CurrentFloor)
 }
 
+func distance(a, b int) int {
+	if a < b {
+		return b - a
+	}
+	return a - b
+}
+
 func isTravellingTowardsOrder(o order.Order, es elevatorstate.ElevatorState) bool {
 	switch {
 	case o.Floor > es.CurrentFloor && es.IntendedDir == elevatorstate.Up:
@@ -62,12 +62,14 @@ func isTravellingTowardsOrder(o order.Order, es elevatorstate.ElevatorState) boo
 }
 
 func atDestinationFloor(o order.Order, es elevatorstate.ElevatorState) bool {
-	if (o.Floor == es.CurrentFloor) {
+	if o.Floor == es.CurrentFloor {
 		switch {
-		case o.IsFromHall():
+		case o.IsFromCab():
 			return true
-		case o.Class == order.HALL_UP && es. 
-		
+		case o.Class == order.HALL_UP && es.IntendedDir != elevatorstate.Down:
+			return true
+		case o.Class == order.HALL_DOWN && es.IntendedDir != elevatorstate.Up:
+			return true
 		}
 	}
 	return false
