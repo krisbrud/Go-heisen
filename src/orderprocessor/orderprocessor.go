@@ -46,12 +46,13 @@ func OrderProcessor(
 					// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
 					writeReq := orderrepository.MakeWriteRequest(incomingOrder)
 					repoWriteRequests <- writeReq
-					if !<-writeReq.SuccessCh {
+					if <-writeReq.SuccessCh {
+						toController <- incomingOrder
+						toTransmitter <- incomingOrder
+					} else {
 						fmt.Println("Error: Could not write new order to repo for some reason!")
+						// TODO maybe add restart
 					}
-
-					toController <- incomingOrder
-					toTransmitter <- incomingOrder
 				}
 			}()
 		}
