@@ -12,6 +12,6 @@ const (
 )
 
 type ElevatorState struct {
-	currentFloor int
-	relPos       RelativePosition
+	CurrentFloor int
+	RelPos       RelativePosition
 }

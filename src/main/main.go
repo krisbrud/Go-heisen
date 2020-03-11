@@ -1,50 +1,70 @@
 package main
 
 import (
-	"Go-heisen/src/arrivedfloorhandler"
-	"Go-heisen/src/buttonpushhandler"
-	"Go-heisen/src/controller"
-	"Go-heisen/src/delegator"
-	"Go-heisen/src/elevatorstate"
-	"Go-heisen/src/networkreceiver"
-	"Go-heisen/src/networktransmitter"
-	"Go-heisen/src/order"
-	"Go-heisen/src/orderrepository"
-	"Go-heisen/src/readrequest"
-	"Go-heisen/src/watchdog"
+	//"Go-heisen/src/controller"
 	"fmt"
-	"time"
+
+	"../controller"
+	"../elevatorio"
+	"../elevatorstate"
+	"../order"
+	//"Go-heisen/src/readrequest"
 )
 
 func main() {
-	restartSystem := make(chan bool)
 
-	go startSystem(restartSystem)
+	/*	restartSystem := make(chan bool)
+
+		go startSystem(restartSystem)
+S
+		for {
+			select {
+			case <-restartSystem:
+				go startSystem(restartSystem)
+			}
+		}*/
+	toButtonPushHandler := make(chan order.Order)
+	toArrivedFloorHandler := make(chan elevatorstate.ElevatorState)
+	toDelegator := make(chan elevatorstate.ElevatorState)
+	readState := make(chan elevatorstate.ElevatorState)
+	readQueue := make(chan order.Order)
+	readButtonPush := make(chan order.Order)
+	readCurrentFloor := make(chan elevatorio.ButtonEvent)
+
+	go controller.Controller(toButtonPushHandler,
+		toArrivedFloorHandler,
+		toDelegator,
+		readState,
+		readQueue,
+		readButtonPush)
 
 	for {
 		select {
-		case <-restartSystem:
-			go startSystem(restartSystem)
+		case btn := <-toButtonPushHandler:
+			fmt.Println(btn)
 		}
+
 	}
+
 }
 
-func startSystem(restartSystem chan bool) {
-	/*
-		TODO
-		Declare channels
-		Make restart-system (with channel)
-		Start goroutines
-	*/
+//func startSystem(restartSystem chan bool) {
+/*
+	TODO
+	Declare channels
+	Make restart-system (with channel)
+	Start goroutines
+*/
 
-	/*
-		TODO Channels
-	*/
-	restart := make(chan bool)
+/*
+	TODO Channels
+*/
+//restart := make(chan bool)
 
-	// Declare channels, organized after who reads them
+// Declare channels, organized after who reads them
 
-	// ArrivedFloorHandler
+// ArrivedFloorHandler
+/*
 	arrivedStateUpdates := make(chan elevatorstate.ElevatorState)
 	arrivedRepoReads := make(chan order.Order)
 	// ButtonPushHandler
@@ -65,8 +85,9 @@ func startSystem(restartSystem chan bool) {
 	fromReceiver := make(chan order.Order)
 	// Watchdog
 	watchdogRepoReads := make(chan order.Order)
-
-	// Start goroutines
+*/
+// Start goroutines
+/*
 	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, repoReadRequests, arrivedRepoReads, toOrderProcessor)
 	go buttonpushhandler.ButtonPushHandler(buttonPushOrders, buttonRepoReads, repoReadRequests, toDelegator)
 	go controller.Controller()
@@ -89,4 +110,7 @@ func startSystem(restartSystem chan bool) {
 	}
 
 	restartSystem <- true
+
+
 }
+*/
