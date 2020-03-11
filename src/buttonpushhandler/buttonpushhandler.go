@@ -1,8 +1,8 @@
 package buttonpushhandler
 
 import (
-	"Go-heisen/src/order"
-	"Go-heisen/src/readrequest"
+	"../order"
+	"../readrequest"
 )
 
 // ButtonPushHandler checks if an order alre
@@ -19,7 +19,8 @@ func ButtonPushHandler(
 			// Vent på resultat
 			// Sjekk at ingen aktive ordre er like
 			// 		send i så fall videre
-			activeOrders := <- readAllActiveRequests;
+			//TODO sørg for at alle active ordre blir lest, oppdater for løkken når du har fått til riktig syntax på dette. 
+			activeOrders := <- readAllActiveRequests; //her var tanken at active ORders skulle være en liste med alle aktive ordre
 			var orderExist = false;
 			if readButtonPush.IsValid() {
 				for order in activeOrders{
