@@ -9,8 +9,9 @@ type CostRequest struct {
 }
 
 type CostResponse struct {
-	OrderID string
-	Cost    int
+	OrderID 	string
+	ResponderID	string
+	Cost    	int
 }
 
 type orderDelegation struct {
@@ -19,7 +20,21 @@ type orderDelegation struct {
 	disallowedRecipent string
 }
 
-func makeOrderDelegation(o order, disallowed)
+func makeOrderDelegation(o order) {
+	return orderDelegation{
+		o: o,
+		costs: [],
+		disallowedRecipent: ""
+	}
+}
+
+func makeOrderRedelegation(o order, disallowed string) {
+	return orderDelegation{
+		o: o,
+		costs: [],
+		disallowedRecipent: disallowed,
+	}
+}
 
 func Delegator(
 	toDelegate chan order.Order,
@@ -66,14 +81,44 @@ func Delegator(
 		case orderToDelegate := <-toDelegate:
 			id := orderToDelegate.OrderID
 			if _, currentlyDelegating := delegations[id]; !currentlyDelegating {
-				delegations[id] = 
+				delegations[id] = makeOrderDelegation(orderToDelegate)
 			}
 
 		case orderToRedelegate := <-toRedelegate:
-			
+			id := orderToDelegate.OrderID
+			disallowedRecipent := orderToRedelegate.RecipentID;
+			if _, currentlyDelegating := delegations[id]; !currentlyDelegating {
+				delegations[id] = makeOrderRedelegation(orderToDelegate, disallowedRecipent)
+			}
 
-		case costResponse := <-costResponseRx
+		case costResponse := <-costResponseRx:
+			orderID := costResponse.OrderID
+			responderID := costResponse.ResponderID
+			cost := costResponse.Cost
+
+			delegation, currentlyDelegating := delegations[orderID]
+
+			if !currentlyDelegating {
+				break;
+			}
+					
+			if responderID == delegation.disallowedRecipent {
+				break
+			}
 			
+			// Everything seems fine, update the cost if it is not present
+			// or worse than the one there
+			if oldCost, costExists := delegation.costs[responderID]; costExists {
+				if cost > oldCost {
+					delegations[orderID].costs[responderID] = cost
+				}
+			} else {
+				delegations[orderID].costs[responderID] = cost
+			}
+
+			// Check if there are enough costs
+
+						
 		}
 	}
 }
