@@ -1,5 +1,10 @@
 package order
 
+import (
+	"math/rand"
+	"time"
+)
+
 type OrderClass int
 
 const (
@@ -10,14 +15,14 @@ const (
 )
 
 const (
-	invalidOrderID  = ""
+	invalidOrderID  = -1
 	invalidFloor    = -1
 	invalidClass    = INVALID
 	invalidRecipent = ""
 )
 
 type Order struct {
-	OrderID    string
+	OrderID    int
 	Floor      int
 	Class      OrderClass // Defined by iota-"enum"
 	RecipentID string
@@ -32,6 +37,17 @@ func NewInvalidOrder() Order {
 		"no recipent",
 		false,
 	}
+}
+
+var idGeneratorSeeded = false
+
+func GetRandomID() int {
+	if !idGeneratorSeeded {
+		rand.Seed(time.Now().UTC().UnixNano())
+		idGeneratorSeeded = true
+	}
+
+	return rand.Int()
 }
 
 func (o *Order) SetCompleted() { o.Completed = true }
