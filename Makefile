@@ -1,11 +1,12 @@
 # TODO:
 #	runsimulator
 #	runelevator
-#	test
-#	lint
-#	gopath
 #	build?
 
 .PHONY: test
 test:
 	go test ./...
+
+.PHONY: lint
+lint:
+	gofmt -w src/**/*.go

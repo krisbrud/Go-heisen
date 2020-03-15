@@ -1,40 +1,42 @@
 package buttonpushhandler
 
 import (
-	"../order"
-	"../readrequest"
+	//"../order"
+	"Go-heisen/src/order"
+	"Go-heisen/src/orderrepository"
+	"fmt"
 )
 
-// ButtonPushHandler checks if an order alre
+
+// ButtonPushHandler checks if an order already exist
 func ButtonPushHandler(
-	buttonPushOrders chan order.Order,
-	readAllActiveRequests chan orderrepository.ReadRequest,
-	toDelegatorChan chan order.Order,
+	receiveOrder chan order.Order,
+	readAllOrdersRequest chan orderrepository.ReadRequest,
+	toDelegator chan order.Order,
 ) {
-	var activeOrders order.Order; 
+	var orderExist = false;
+
 	for {
 		select {
-		case readButtonPush := <- buttonPushOrders:
-			// Lag readreq. for alle aktive ordre
-			// Vent på resultat
-			// Sjekk at ingen aktive ordre er like
-			// 		send i så fall videre
-			//TODO sørg for at alle active ordre blir lest, oppdater for løkken når du har fått til riktig syntax på dette. 
-			activeOrders := <- readAllActiveRequests; //her var tanken at active ORders skulle være en liste med alle aktive ordre
-			var orderExist = false;
-			if readButtonPush.IsValid() {
-				for order in activeOrders{
-					if order == readButtonPush{
+		case o := <- receiveOrder:
+			fmt.Println("inside case")
+			if o.IsValid(){	
+				fmt.Println("order is valid")
+				readReq :=  orderrepository.MakeReadAllActiveRequest()
+				for order := range readReq.ResponseCh{
+					fmt.Println("inside for loop")
+					if order == o{
 						orderExist = true; 
+						fmt.Println("Order already exists")
+						readReq.ResponseCh <- order
 					}
-				
 				}
+				close(readReq.ResponseCh)
 				if !orderExist{
-					toDelegatorChan <- readButtonPush
+					toDelegator <- o
+					fmt.Println("Order sent to delegator")
 				}
 			}
 		}
 	}
 }
-
-
