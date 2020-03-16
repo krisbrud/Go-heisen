@@ -7,10 +7,11 @@ import (
 
 type OrderClass int
 
+// TODO: Elevatorio or this so there are no double definitions!
 const (
-	CAB OrderClass = iota
-	HALL_UP
+	HALL_UP OrderClass = iota
 	HALL_DOWN
+	CAB
 	INVALID
 )
 
