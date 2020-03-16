@@ -3,6 +3,7 @@ package ordercost
 import (
 	"Go-heisen/src/elevatorstate"
 	"Go-heisen/src/order"
+	"fmt"
 )
 
 /*
@@ -28,7 +29,8 @@ func Cost(o order.Order, es elevatorstate.ElevatorState) int {
 		return 0
 	}
 
-	if !isTravellingTowardsOrder(o, es) {
+	if !isTravellingTowardsOrder(o, es) && !es.IsIdle() {
+		fmt.Println("Inside recursive cost func")
 		// We also need to execute orders before turning around
 		// => add distance before turning around and recursively find
 		// distance from current state to intermediate + from intermediate state to destination
@@ -36,7 +38,8 @@ func Cost(o order.Order, es elevatorstate.ElevatorState) int {
 		return distance(es.CurrentFloor, intermediateState.CurrentFloor) + Cost(o, intermediateState)
 	}
 
-	// Travelling towards order, return distance to floor
+	// Travelling towards order or standing still, return distance to floor
+	fmt.Println("At end of cost func")
 	return distance(o.Floor, es.CurrentFloor)
 }
 

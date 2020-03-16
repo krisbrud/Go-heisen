@@ -35,7 +35,7 @@ func TestCost(t *testing.T) {
 
 func getMockFloorZeroCabUpOrder() order.Order {
 	return order.Order{
-		OrderID:    "Some ID",
+		OrderID:    12345,
 		Floor:      0,
 		Class:      order.HALL_UP,
 		RecipentID: "SomeElevator",
@@ -53,7 +53,7 @@ func getMockElevatorStateFirstFloorUp() elevatorstate.ElevatorState {
 
 func getMockThirdFloorCabCall() order.Order {
 	return order.Order{
-		OrderID:    "Some ID",
+		OrderID:    234678,
 		Floor:      3,
 		Class:      order.CAB,
 		RecipentID: "SomeElevator",
