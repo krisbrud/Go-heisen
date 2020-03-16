@@ -19,39 +19,33 @@ func Controller(
 	numFloors := 4 // TODO: Refactor
 	elevatorio.Init("localhost:15657", numFloors)
 
-	drv_buttons := make(chan elevatorio.ButtonEvent)
-	drv_floors := make(chan int)
-	drv_stop := make(chan bool)
+	drvButtons := make(chan elevatorio.ButtonEvent)
+	drvFloors := make(chan int)
 
-	go elevatorio.PollButtons(drv_buttons)
-	go elevatorio.PollFloorSensor(drv_floors)
-	go elevatorio.PollStopButton(drv_stop)
+	go elevatorio.PollButtons(drvButtons)
+	go elevatorio.PollFloorSensor(drvFloors)
 
 	// Initialize belief state
 	var state elevatorstate.ElevatorState
 	var destination int
 
-	// Initialize LightManager
-	toLightManager := make(chan order.Order)
-	go lightManager(toLightManager)
-
 	for {
 		select {
-		case buttonPushed := <-drv_buttons:
+		case buttonPushed := <-drvButtons:
 			// TODO: Make order based on pushed button
 			// go func() { toButtonPushHandler <- buttonPushed }() // må sende dette til button pushed handler
 
-		case elevatorStateChanged := <-readState:
-			if elevatorStateChanged != state {
-				state := elevatorStateChanged
-				go func() { toDelegator <- elevatorStateChanged }() // må lese elevator state og sende den til delegatoren
-			}
+		// case elevatorStateChanged := <-readState:
+		// 	if elevatorStateChanged != state {
+		// 		state := elevatorStateChanged
+		// 		go func() { toDelegator <- elevatorStateChanged }() // må lese elevator state og sende den til delegatoren
+		// 	}
 
-		case arrivedFloor := <-drv_floors:
+		case arrivedFloor := <-drvFloors:
 			if arrivedFloor == destination {
 				elevatorio.SetMotorDirection(elevatorio.MD_Stop)
 				// TODO: send state instead
-				// go func() { toArrivedFloorHandler <- drv_floors }() // må sende beskjed til arrived floor handler
+				// go func() { toArrivedFloorHandler <- drvFloors }() // må sende beskjed til arrived floor handler
 			}
 
 			// case orderToExecute := <- readQueue:
