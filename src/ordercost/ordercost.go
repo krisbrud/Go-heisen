@@ -5,9 +5,6 @@ import (
 	"Go-heisen/src/order"
 )
 
-// TODO:
-// Implement order cost function which takes in order and state
-
 /*
 func cost(o, es, intendedDir)
 	if not travelling towards order
@@ -22,7 +19,7 @@ const (
 )
 
 func Cost(o order.Order, es elevatorstate.ElevatorState) int {
-	if !o.IsValid() || !o.IsMine() || !es.IsValid() {
+	if !o.IsValid() || !o.IsMine() || !es.IsValid() { // TODO - check what happens if removing ismine
 		// TODO panic/restart
 		return maxCost
 	}

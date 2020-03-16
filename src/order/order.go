@@ -42,6 +42,7 @@ func NewInvalidOrder() Order {
 var idGeneratorSeeded = false
 
 func GetRandomID() int {
+	// TODO: Add mutex
 	if !idGeneratorSeeded {
 		rand.Seed(time.Now().UTC().UnixNano())
 		idGeneratorSeeded = true

@@ -25,10 +25,13 @@ const (
 	Idle
 )
 
+// TODO: Refactor to elevator.State
+
 type ElevatorState struct {
 	CurrentFloor int
 	AtFloor      bool
 	IntendedDir  Direction
+	ElevatorID   string
 }
 
 // TODO: Allow any floors
@@ -52,5 +55,9 @@ func (dir Direction) Opposite() Direction {
 }
 
 func MakeInvalidState() ElevatorState {
-	return ElevatorState{BottomFloor - 1, false, Idle}
+	return ElevatorState{BottomFloor - 1, false, Idle, ""}
+}
+
+func GetMyElevatorID() string {
+	return "My ElevatorID123" // TODO refactor - maybe a "config" module?
 }

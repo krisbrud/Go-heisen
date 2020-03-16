@@ -1,174 +1,120 @@
 package delegator
 
 import (
+	"Go-heisen/src/elevatorstate"
 	"Go-heisen/src/order"
+	"Go-heisen/src/ordercost"
 	"fmt"
 )
 
-type CostRequest struct {
-	Order order.Order
-}
+/*
+Get state updates from other elevators:
+	Set state in map
 
-type CostResponse struct {
-	OrderID     int
-	ResponderID string
-	Cost        int
-}
+Order to delegate:
+	Give order ID
+	Delegate order to elevator with minimum cost
+	Send to processor
+	Send to transmitter
 
-type orderDelegation struct {
-	o                  order.Order
-	costs              map[string]int
-	disallowedRecipent string
-}
+Redelegate order:
+	Same as before, redelegation
+	Send to processor
+	Send to transmitter
 
-func makeOrderDelegation(o order.Order) orderDelegation {
-	return orderDelegation{
-		o:                  o,
-		costs:              make(map[string]int),
-		disallowedRecipent: "",
-	}
-}
+PeerUpdate
+	Update local representation of peers
 
-func makeOrderRedelegation(o order.Order, disallowed string) orderDelegation {
-	return orderDelegation{
-		o:                  o,
-		costs:              make(map[string]int),
-		disallowedRecipent: disallowed,
-	}
-}
+*/
 
+// Delegator chooses the best recipent for a order to be delegated or redelegated
+// based on it's current belief state
 func Delegator(
 	toDelegate chan order.Order,
 	toRedelegate chan order.Order,
 	toTransmitter chan order.Order,
 	toProcessor chan order.Order,
-	costRequestTx chan CostRequest,
-	costResponseRx chan CostResponse,
-	peerUpdates chan []string,
+	stateUpdates chan elevatorstate.ElevatorState,
+	//peerUpdates chan []string,
 ) {
-	currentlyRedelegating := make(map[string]bool)
-	/*
-		initialize delegations
 
-		toDelegate:
-			set order in currently delegating
-			set costReqTimeout
-
-		toRedelegate:
-			if not currently redelegating
-				set redelegation
-				send to toDelegate
-
-		costReq:
-			check cost
-			send costresponse
-
-		costResponse:
-			if currently delegating order
-				if responder not in disallowed recipents for order
-					update costs
-					if enough costs
-						set recipent, send to processor
-						remove from currently delegating
-
-		costTimeOut
-			if currently delegating
-
-
-	*/
-
-	delegations := make(map[int]orderDelegation)
 	redelegations := make(map[int]bool)
-	peers := make([]string, 0)
+	// peers := make([]string, 0)
+	elevatorStates := make(map[string]elevatorstate.ElevatorState)
 
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
-			id := orderToDelegate.OrderID
-			if _, currentlyDelegating := delegations[id]; !currentlyDelegating {
-				delegations[id] = makeOrderDelegation(orderToDelegate)
+			// Find best recipent for order based on current belief state
+			recipent, err := bestRecipent(orderToDelegate, elevatorStates, "")
+			orderToDelegate.RecipentID = recipent
+			// Doing order myself, but warn user? TODO fix this
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				break
 			}
+			toProcessor <- orderToDelegate
+			toTransmitter <- orderToDelegate
 
 		case orderToRedelegate := <-toRedelegate:
 			// Redelegate the order if it isn't redelegated already
-			if _, alreadyRedelegating := redelegations[orderToRedelegate.OrderID]; alreadyRedelegating {
+			oldID := orderToRedelegate.OrderID
+			if _, alreadyRedelegating := redelegations[oldID]; alreadyRedelegating {
 				break
 			}
+			// Set the order as being redelegated
+			redelegations[oldID] = true
 
 			disallowedRecipent := orderToRedelegate.RecipentID
-			orderToRedelegate.OrderID = order.GetRandomID()
+			orderToRedelegate.OrderID = order.GetRandomID() // Give redelegation of order new ID
 
-			delegations[orderToRedelegate.OrderID] = makeOrderRedelegation(orderToRedelegate, disallowedRecipent)
-
-		case costResponse := <-costResponseRx:
-			orderID := costResponse.OrderID
-			responderID := costResponse.ResponderID
-			cost := costResponse.Cost
-
-			delegation, currentlyDelegating := delegations[orderID]
-
-			if !currentlyDelegating {
-				break
-			}
-			if responderID == delegation.disallowedRecipent {
-				break
-			}
-
-			// Everything seems fine, update the cost if it is not present
-			// or worse than the one there
-			if oldCost, costExists := delegation.costs[responderID]; costExists {
-				if cost > oldCost {
-					delegations[orderID].costs[responderID] = cost
-				}
-			} else {
-				delegations[orderID].costs[responderID] = cost
-			}
-
-			if !enoughCosts(delegation, peers) {
-				break
-			}
-
-			// Delegate the order to the elevator with the lowest cost which is still in peers
-			bestElevatorID, err := lowestCost(delegation, peers)
-
+			recipent, err := bestRecipent(orderToRedelegate, elevatorStates, disallowedRecipent)
+			orderToRedelegate.RecipentID = recipent
 			if err != nil {
-				fmt.Printf(err.Error())
+				fmt.Printf("%v\n", err)
 				break
 			}
 
-			delegation.o.RecipentID = bestElevatorID
+			toProcessor <- orderToRedelegate
+			toTransmitter <- orderToRedelegate
 
-			if !delegation.o.IsValid() {
-				fmt.Println("Order to delegate was not valid!")
+		case state := <-stateUpdates:
+			if !state.IsValid() {
+				fmt.Printf("Invalid state incoming! state: %#v", state)
 				break
 			}
+			// TODO: Possibly add timestamp for state, only accept states that are
+			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
+			elevatorStates[state.ElevatorID] = state
 
-		case peerUpdate := <-peerUpdates:
-			peers = peerUpdate
+			// case peerUpdate := <-peerUpdates:
+			// 	peers = peerUpdate
 		}
 	}
 }
 
-func lowestCost(delegation orderDelegation, peers []string) (string, error) {
+func bestRecipent(o order.Order, states map[string]elevatorstate.ElevatorState, disallowed string) (string, error) {
 	bestElevatorID := ""
 	bestCost := 10000 // TODO: Refactor
 
-	for elevatorID, cost := range delegation.costs {
-		if elevatorID != delegation.disallowedRecipent && cost < bestCost {
+	for elevatorID, state := range states {
+		cost := ordercost.Cost(o, state)
+		if elevatorID != disallowed && cost < bestCost {
 			bestCost = cost
 			bestElevatorID = elevatorID
 		}
 	}
 
 	if bestElevatorID == "" {
-		err := fmt.Errorf("Did not any valid elevator to delegate to! Delegation %#v\n Peers: %#v\n", delegation, peers)
-		return "", err
+		err := fmt.Errorf("Did not any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
+		return elevatorstate.GetMyElevatorID(), err
 	}
 
 	return bestElevatorID, nil
 }
 
-func enoughCosts(delegation orderDelegation, peers []string) bool {
+// Maybe remove
+/* func enoughCosts(delegation orderDelegation, peers []string) bool {
 	numValidCosts := len(delegation.costs) // No need to check if disallowed, they are not added to the map
 	numNeededCosts := len(peers)
 
@@ -178,4 +124,4 @@ func enoughCosts(delegation orderDelegation, peers []string) bool {
 	}
 
 	return numValidCosts >= numNeededCosts
-}
+} */
