@@ -6,11 +6,6 @@ import (
 	"testing"
 )
 
-// TODO:
-// Redelegate the order, check that elev2 should take it
-// Send new state updates such that elev3 is best fit to take the order
-// Redelegate it again, it should
-
 func TestDelegator(t *testing.T) {
 	// Initialize delegator and channels
 	toDelegate := make(chan order.Order)

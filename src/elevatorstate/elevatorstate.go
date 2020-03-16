@@ -43,6 +43,8 @@ func (es ElevatorState) IsValid() bool {
 
 func (es ElevatorState) IsAtFloor() bool { return es.AtFloor }
 
+func (es ElevatorState) IsIdle() bool { return es.IntendedDir == Idle }
+
 func (dir Direction) Opposite() Direction {
 	switch dir {
 	case Up:

@@ -7,26 +7,6 @@ import (
 	"fmt"
 )
 
-/*
-Get state updates from other elevators:
-	Set state in map
-
-Order to delegate:
-	Give order ID
-	Delegate order to elevator with minimum cost
-	Send to processor
-	Send to transmitter
-
-Redelegate order:
-	Same as before, redelegation
-	Send to processor
-	Send to transmitter
-
-PeerUpdate
-	Update local representation of peers
-
-*/
-
 // Delegator chooses the best recipent for a order to be delegated or redelegated
 // based on it's current belief state
 func Delegator(
@@ -97,13 +77,17 @@ func bestRecipent(o order.Order, states map[string]elevatorstate.ElevatorState, 
 	bestElevatorID := ""
 	bestCost := 10000 // TODO: Refactor
 
+	fmt.Printf("Finding best recipent for order %#v\n", o)
+	fmt.Printf("Disallowed: %v\n", disallowed)
 	for elevatorID, state := range states {
 		cost := ordercost.Cost(o, state)
+		fmt.Printf("Cost for %v: %v", elevatorID, cost)
 		if elevatorID != disallowed && cost < bestCost {
 			bestCost = cost
 			bestElevatorID = elevatorID
 		}
 	}
+	fmt.Println("")
 
 	if bestElevatorID == "" {
 		err := fmt.Errorf("Did not any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
@@ -112,16 +96,3 @@ func bestRecipent(o order.Order, states map[string]elevatorstate.ElevatorState, 
 
 	return bestElevatorID, nil
 }
-
-// Maybe remove
-/* func enoughCosts(delegation orderDelegation, peers []string) bool {
-	numValidCosts := len(delegation.costs) // No need to check if disallowed, they are not added to the map
-	numNeededCosts := len(peers)
-
-	if delegation.disallowedRecipent != "" {
-		// Redelegating order, one elevator disallowed
-		numNeededCosts--
-	}
-
-	return numValidCosts >= numNeededCosts
-} */
