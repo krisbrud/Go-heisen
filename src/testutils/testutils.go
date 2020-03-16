@@ -4,7 +4,7 @@ import "Go-heisen/src/order"
 
 func GetSomeOrder() order.Order {
 	return order.Order{
-		"Some ID",
+		1234,
 		1,
 		order.CAB,
 		"Some recipent",
@@ -14,7 +14,7 @@ func GetSomeOrder() order.Order {
 
 func GetSomeOtherOrder() order.Order {
 	return order.Order{
-		"Some other ID",
+		4321,
 		2,
 		order.CAB,
 		"Some other recipent",

@@ -1,10 +1,10 @@
 package buttonpushhandler
 
 import (
-	//"../order"
+	"fmt"
+
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
-	"fmt"
 )
 
 // ButtonPushHandler checks if an order already exist
@@ -13,7 +13,6 @@ func ButtonPushHandler(
 	readAllOrdersRequests chan orderrepository.ReadRequest,
 	toDelegator chan order.Order,
 ) {
-
 	for {
 		select {
 		case o := <-receiveOrder:

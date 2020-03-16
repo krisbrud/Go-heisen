@@ -23,7 +23,7 @@ func Watchdog(
 		return time.Since(initTime)
 	}
 
-	timestamps := make(map[string]time.Duration)
+	timestamps := make(map[int]time.Duration)
 
 	ticker := time.NewTicker(millisBetweenTicks * time.Millisecond)
 

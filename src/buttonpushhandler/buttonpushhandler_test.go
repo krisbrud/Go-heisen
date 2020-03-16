@@ -1,13 +1,13 @@
 package buttonpushhandler
 
 import (
+	"fmt"
+	"testing"
+
 	"Go-heisen/src/order"
+	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/testutils"
-	"testing"
-	"Go-heisen/src/orderprocessor"
-	"fmt"
-
 )
 
 func TestButtonPushHandler(t *testing.T) {
@@ -19,7 +19,7 @@ func TestButtonPushHandler(t *testing.T) {
 	// writeRequests := make(chan orderrepository.WriteRequest)
 	// toTransmitter := make(chan order.Order)
 	// toController := make(chan order.Order)
-	
+
 	receiveOrder := make(chan order.Order)
 	readAllOrdersRequest := make(chan orderrepository.ReadRequest)
 	toDelegator := make(chan order.Order)
@@ -34,7 +34,6 @@ func TestButtonPushHandler(t *testing.T) {
 
 	incomingOrdersChan <- newOrder
 
-
 	// Read the order back from OrderRepository to check that it was written correctly
 	readReq := orderrepository.MakeReadAllActiveRequest()
 	readAllRequests <- readReq
@@ -43,4 +42,3 @@ func TestButtonPushHandler(t *testing.T) {
 	anotherIncomingOrdersChan <- anotherOrder
 
 }
-

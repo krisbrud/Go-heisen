@@ -9,7 +9,7 @@ func Controller(
 	toArrivedFloorHandler chan elevatorstate.ElevatorState, 
 	toDelegator chan elevatorstate.ElevatorState, 
 	readState chan elevatorstate.ElevatorState,
-	readQueue chan order.Order
+	readQueue chan order.Order,
 ) {
 	
 	var state elevatorstate.ElevatorState  

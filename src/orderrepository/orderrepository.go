@@ -7,17 +7,17 @@ import (
 
 // ReadRequest serves as a request to read an order from OrderRepository
 type ReadRequest struct {
-	OrderID    string
+	OrderID    int
 	ResponseCh chan order.Order
 }
 
 // MakeReadRequest returns a ReadRequest with a new response channel
-func MakeReadRequest(OrderID string) ReadRequest {
+func MakeReadRequest(OrderID int) ReadRequest {
 	return ReadRequest{OrderID, make(chan order.Order)}
 }
 
 // MakeReadAllActiveRequest makes a ReadRequest that will read back all active orders
-func MakeReadAllActiveRequest() ReadRequest { return ReadRequest{"", make(chan order.Order)} }
+func MakeReadAllActiveRequest() ReadRequest { return ReadRequest{-1, make(chan order.Order)} }
 
 // MakeWriteRequest returns a WriteRequest with a success response channel
 func MakeWriteRequest(orderToWrite order.Order) WriteRequest {
@@ -36,7 +36,7 @@ func OrderRepository(
 	readAllActiveRequests chan ReadRequest,
 	writeRequests chan WriteRequest,
 ) {
-	allOrders := make(map[string]order.Order)
+	allOrders := make(map[int]order.Order)
 
 	for {
 		select {

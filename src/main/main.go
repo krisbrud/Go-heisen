@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"Go-heisen/src/arrivedfloorhandler"
-	"../buttonpushhandler"
 	"Go-heisen/src/buttonpushhandler"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
@@ -10,13 +12,9 @@ import (
 	"Go-heisen/src/networkreceiver"
 	"Go-heisen/src/networktransmitter"
 	"Go-heisen/src/order"
-	"Go-heisen/src/orderrepository"
-	"Go-heisen/src/watchdog"
-	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/orderrepository"
-	"fmt"
-	"time"
+	"Go-heisen/src/watchdog"
 )
 
 func main() {

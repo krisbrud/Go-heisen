@@ -13,7 +13,7 @@ func TestOrderRepository(t *testing.T) {
 
 	go OrderRepository(readSingleRequests, readAllRequests, writeRequests)
 
-	nonExistingID := "Non-existent;)"
+	nonExistingID := 12364
 	myReadReq := MakeReadRequest(nonExistingID)
 
 	readSingleRequests <- myReadReq
