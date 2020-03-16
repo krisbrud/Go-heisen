@@ -7,35 +7,36 @@ import (
 	"fmt"
 )
 
-
 // ButtonPushHandler checks if an order already exist
 func ButtonPushHandler(
 	receiveOrder chan order.Order,
-	readAllOrdersRequest chan orderrepository.ReadRequest,
+	readAllOrdersRequests chan orderrepository.ReadRequest,
 	toDelegator chan order.Order,
 ) {
-	var orderExist = false;
 
 	for {
 		select {
-		case o := <- receiveOrder:
-			fmt.Println("inside case")
-			if o.IsValid(){	
-				fmt.Println("order is valid")
-				readReq :=  orderrepository.MakeReadAllActiveRequest()
-				for order := range readReq.ResponseCh{
-					fmt.Println("inside for loop")
-					if order == o{
-						orderExist = true; 
-						fmt.Println("Order already exists")
-						readReq.ResponseCh <- order
-					}
+		case o := <-receiveOrder:
+			if !o.IsValid() {
+				fmt.Println("Invalid order in ButtonPushHandler!")
+				break
+			}
+
+			readReq := orderrepository.MakeReadAllActiveRequest()
+			readAllOrdersRequests <- readReq
+
+			orderExists := false
+			for order := range readReq.ResponseCh {
+				if order == o {
+					orderExists = true
+					readReq.ResponseCh <- order
 				}
-				close(readReq.ResponseCh)
-				if !orderExist{
-					toDelegator <- o
-					fmt.Println("Order sent to delegator")
-				}
+			}
+			close(readReq.ResponseCh)
+
+			if !orderExists {
+				toDelegator <- o
+				fmt.Println("Order sent to delegator")
 			}
 		}
 	}
