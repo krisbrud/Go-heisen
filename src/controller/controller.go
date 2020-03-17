@@ -72,13 +72,7 @@ func Controller(
 		select {
 		case buttonPushed := <-drvButtons:
 			// TODO: Make order based on pushed button
-			buttonOrder := order.Order{
-				OrderID:    order.GetRandomID(),
-				Floor:      buttonPushed.Floor,
-				Class:      order.OrderClass(buttonPushed.Button), // TODO Verify that definitions are the same
-				RecipentID: "",
-				Completed:  false,
-			}
+			buttonOrder := 
 			go func() { toButtonPushHandler <- buttonOrder }() // må sende dette til button pushed handler
 
 		case arrivedFloor := <-drvFloors:
