@@ -27,6 +27,10 @@ const (
 
 // TODO: Refactor to elevator.State
 
+// type Config {
+
+// }
+
 type ElevatorState struct {
 	CurrentFloor int
 	AtFloor      bool
