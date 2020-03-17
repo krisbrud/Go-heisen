@@ -70,5 +70,9 @@ func (o Order) IsFromCab() bool {
 	return o.Class == CAB
 }
 
+func AreEquivalent(a, b Order) bool {
+	return a.Class == b.Class && a.Floor == b.Floor && a.Completed == b.Completed
+}
+
 // TODO:
 // isMine() bool

@@ -15,7 +15,7 @@ ArriveFloor:
 	if should stop:
 		update atfloor in state
 		send to ArrivedFloorHandler
-		remove from queue
+		remove from orders
 		set lights for completed order
 		if door closed:
 			open door
@@ -65,35 +65,19 @@ func Controller(
 
 	// Initialize belief state
 	var state elevatorstate.ElevatorState
-	var destination int
 	queue := queue.MakeEmptyQueue()
 
 	for {
 		select {
-		case buttonPushed := <-drvButtons:
-			// TODO: Make order based on pushed button
-			buttonOrder := 
-			go func() { toButtonPushHandler <- buttonOrder }() // må sende dette til button pushed handler
+		case newFloor := <-drvFloors:
+			state.CurrentFloor = newFloor
 
-		case arrivedFloor := <-drvFloors:
-			state.CurrentFloor = arrivedFloor
-
-			if arrivedFloor == destination {
-				elevatorio.SetMotorDirection(elevatorio.MD_Stop)
-				state.AtFloor = true
-				state.IntendedDir = elevatorstate.Idle
-			}
-			go func() { toDelegator <- state }() // må sende beskjed til arrived floor handler
-
-			// case orderToExecute := <- readQueue:
-			// 	destination = orderToExecute.Floor
-			// 	if floor < destination {
-			// 		elevatorio.SetMotorDirection(elevatorio.MD_Up)
-			// 	} else if floor > destination {
-			// 		elevatorio.SetMotorDirection(elevatorio.MD_Down)
-			// 	}
 		}
 	}
+}
+
+func shouldStop(q queue.OrderQueue, state elevatorstate.ElevatorState) bool {
+
 }
 
 func setOrderLights(incomingOrder order.Order) {
