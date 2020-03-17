@@ -121,20 +121,28 @@ func Controller(
 func shouldStop(elev elevator.Elevator) bool {
 	switch e.dirn {
 	case D_Down:
-		return
-		e.requests[e.floor][B_HallDown] ||
-			e.requests[e.floor][B_Cab] ||
-			!requests_below(e)
+		shouldStopAtOrder := func(o order.Order) {
+			atSameFloor := elev.Floor == o.Floor
+			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_UP
+
+			return (atSameFloor && notOppositeDirection) || !isBelow(o, elev.Floor)
+		}
+		return anyOrder(elev.ActiveOrders, shouldStopAtOrder)
+
 	case D_Up:
-		return
-		e.requests[e.floor][B_HallUp] ||
-			e.requests[e.floor][B_Cab] ||
-			!requests_above(e)
+		shouldStopAtOrder := func(o order.Order) {
+			atSameFloor := elev.Floor == o.Floor
+			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_DOWN
+
+			return (atSameFloor && notOppositeDirection) || !isAbove(o, elev.Floor)
+		}
+		return anyOrder(elev.ActiveOrders, shouldStopAtOrder)
 	}
-	return true
+
+	return true // Default
 }
 
-func anyOrders(orderList []order.Order, predicateFunc func(o order.Order) bool) bool {
+func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) bool {
 	satisfied := false
 
 	for _, o := range orderList {
@@ -144,35 +152,32 @@ func anyOrders(orderList []order.Order, predicateFunc func(o order.Order) bool) 
 	return satisfied
 }
 
-func hasOrdersAbove(elev elevator.Elevator) bool {
-	isAbove := func(o order.Order) {
-		return o.Floor > elev.Floor
+func isAbove(o order.Order, floor int) bool {
+	return o.Floor > elev.Floor
+}
+
+func isBelow(o order.Order) bool {
+	return o.Floor < elev.Floor
+}
+
+func chooseDirection(elev elevator.Elevator) {
+	switch {
+	case elev.dirn == D_Up:
+		switch {
+		case anyOrder(elev.ActiveOrders, isAbove):
+			return D_Up
+		case anyOrder(elev.ActiveOrders, isBelow):
+			return D_Down
+		}
+
+	case elev.Dirn == D_Up || elev.Dirn == D_Down:
+		switch {
+		case anyOrder(elev.ActiveOrders, isBelow):
+			return D_Down
+		case anyOrder(elev.ActiveOrders, isAbove):
+			return D_Up
+		}
+	default:
+		return D_Stop // Default case
 	}
-	return anyOrders(elev.ActiveOrders, isAbove)
 }
-
-func hasOrdersBelow(elev elevator.Elevator) bool {
-	isBelow := func(o order.Order) {
-		return o.Floor < elev.Floor
-	}
-	return anyOrders(elev.ActiveOrders, isBelow)
-}
-
-/* func chooseDirection(elev elev) {
-
-Dirn requests_chooseDirection(Elevator e){
-    switch(e.dirn){
-    case D_Up:
-        return  requests_above(e) ? D_Up    :
-                requests_below(e) ? D_Down  :
-                                    D_Stop  ;
-    case D_Down:
-    case D_Stop: // there should only be one request in this case. Checking up or down first is arbitrary.
-        return  requests_below(e) ? D_Down  :
-                requests_above(e) ? D_Up    :
-                                    D_Stop  ;
-    default:
-        return D_Stop;
-    }
-}
-} */
