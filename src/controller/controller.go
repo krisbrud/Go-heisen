@@ -4,11 +4,49 @@ import (
 	"Go-heisen/src/elevatorio"
 	"Go-heisen/src/elevatorstate"
 	"Go-heisen/src/order"
+	"Go-heisen/src/queue"
 	"fmt"
 )
 
+/*
+ArriveFloor:
+	update floor in state
+
+	if should stop:
+		update atfloor in state
+		send to ArrivedFloorHandler
+		remove from queue
+		set lights for completed order
+		if door closed:
+			open door
+
+	send state to delegator
+
+ButtonPush:
+	if atfloor and idle and same floor:
+		open door
+		update door state
+	else:
+		Send to buttonpushhandler (ordercreator)
+
+IncomingOrder:
+	if not valid:
+		break
+
+	if completed:
+		remove all equivalent from queue
+	else:
+		add to queue
+
+	set lights for order
+
+DoorTimer:
+	turn off door light
+	set door as closed
+	if more orders, execute order
+*/
+
 func Controller(
-	toButtonPushHandler chan order.Order,
 	toArrivedFloorHandler chan elevatorstate.ElevatorState,
 	toDelegator chan elevatorstate.ElevatorState,
 	incomingOrders chan order.Order,
@@ -28,25 +66,30 @@ func Controller(
 	// Initialize belief state
 	var state elevatorstate.ElevatorState
 	var destination int
+	queue := queue.MakeEmptyQueue()
 
 	for {
 		select {
 		case buttonPushed := <-drvButtons:
 			// TODO: Make order based on pushed button
-			// go func() { toButtonPushHandler <- buttonPushed }() // må sende dette til button pushed handler
-
-		// case elevatorStateChanged := <-readState:
-		// 	if elevatorStateChanged != state {
-		// 		state := elevatorStateChanged
-		// 		go func() { toDelegator <- elevatorStateChanged }() // må lese elevator state og sende den til delegatoren
-		// 	}
+			buttonOrder := order.Order{
+				OrderID:    order.GetRandomID(),
+				Floor:      buttonPushed.Floor,
+				Class:      order.OrderClass(buttonPushed.Button), // TODO Verify that definitions are the same
+				RecipentID: "",
+				Completed:  false,
+			}
+			go func() { toButtonPushHandler <- buttonOrder }() // må sende dette til button pushed handler
 
 		case arrivedFloor := <-drvFloors:
+			state.CurrentFloor = arrivedFloor
+
 			if arrivedFloor == destination {
 				elevatorio.SetMotorDirection(elevatorio.MD_Stop)
-				// TODO: send state instead
-				// go func() { toArrivedFloorHandler <- drvFloors }() // må sende beskjed til arrived floor handler
+				state.AtFloor = true
+				state.IntendedDir = elevatorstate.Idle
 			}
+			go func() { toDelegator <- state }() // må sende beskjed til arrived floor handler
 
 			// case orderToExecute := <- readQueue:
 			// 	destination = orderToExecute.Floor
