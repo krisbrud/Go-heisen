@@ -1,7 +1,7 @@
 package arrivedfloorhandler
 
 import (
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/testutils"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestOrderArrivedFloorHandler(t *testing.T) {
-	stateUpdates := make(chan elevatorstate.ElevatorState)
+	stateUpdates := make(chan elevator.Elevator)
 	readAllActiveRequests := make(chan orderrepository.ReadRequest)
 	toOrderProcessor := make(chan order.Order)
 
@@ -29,9 +29,10 @@ func TestOrderArrivedFloorHandler(t *testing.T) {
 		t.Errorf("Couldn't write order to OrderRepo in ArrivedFloorHandler test!: %v", someOrder)
 	}
 
-	incomingState := elevatorstate.ElevatorState{
-		CurrentFloor: someOrder.Floor,
-		RelPos:       elevatorstate.AtFloor,
+	incomingState := elevator.Elevator{
+		Floor:       someOrder.Floor,
+		IntendedDir: elevator.MD_Up,
+		Behaviour:   elevator.EB_Idle,
 	}
 	stateUpdates <- incomingState
 

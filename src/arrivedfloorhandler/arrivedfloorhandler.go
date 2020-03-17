@@ -1,15 +1,15 @@
 package arrivedfloorhandler
 
 import (
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"fmt"
 )
 
-// ArrivedFloorHandler handles clearing of orders when arriving at a destination CurrentFloor
+// ArrivedFloorHandler handles clearing of orders when arriving at a destination Floor
 func ArrivedFloorHandler(
-	stateUpdates chan elevatorstate.ElevatorState,
+	stateUpdates chan elevator.Elevator,
 	readAllActiveRequests chan orderrepository.ReadRequest,
 	toOrderProcessor chan order.Order,
 ) {
@@ -22,16 +22,16 @@ func ArrivedFloorHandler(
 					// TODO restart
 				}
 
-				if !newState.IsAtFloor() {
-					return // Not at floor, no orders to clear
-				}
+				// if !newState.IsAtFloor() {
+				// 	return // Not at floor, no orders to clear
+				// }
 
 				// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 				readAllReq := orderrepository.MakeReadAllActiveRequest()
 				readAllActiveRequests <- readAllReq
 
 				for activeOrder := range readAllReq.ResponseCh {
-					if activeOrder.Floor == newState.CurrentFloor {
+					if activeOrder.Floor == newState.Floor {
 						if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 							// We have completed this order, make OrderProcessor register it and tell everyone.
 							activeOrder.SetCompleted()

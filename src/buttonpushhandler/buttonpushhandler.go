@@ -1,16 +1,16 @@
 package buttonpushhandler
 
 import (
-	"Go-heisen/src/elevatorio"
 	"fmt"
 
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 )
 
 // ButtonPushHandler checks if an order already exist
 func ButtonPushHandler(
-	buttonPush chan elevatorio.ButtonEvent,
+	buttonPush chan elevator.ButtonEvent,
 	readAllOrdersRequests chan orderrepository.ReadRequest,
 	toDelegator chan order.Order,
 ) {
@@ -25,18 +25,16 @@ func ButtonPushHandler(
 				break
 			}
 
-			// Check that equivalent orders don't exist already 
+			// Check that equivalent orders don't exist already
 			readReq := orderrepository.MakeReadAllActiveRequest()
 			readAllOrdersRequests <- readReq
 
 			orderExists := false
-			for existingOrder :|= range readReq.ResponseCh {
-				if existingOrder == o {
+			for existingOrder := range readReq.ResponseCh {
+				if order.AreEquivalent(existingOrder, o) {
 					orderExists = true
-					readReq.ResponseCh <- order
 				}
 			}
-			close(readReq.ResponseCh)
 
 			if !orderExists {
 				toDelegator <- o
@@ -46,7 +44,7 @@ func ButtonPushHandler(
 	}
 }
 
-func makeUnassignedOrder(pushedButton elevatorio.ButtonEvent) order.Order {
+func makeUnassignedOrder(pushedButton elevator.ButtonEvent) order.Order {
 	return order.Order{
 		OrderID:    order.GetRandomID(),
 		Floor:      pushedButton.Floor,

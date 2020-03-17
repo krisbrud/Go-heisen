@@ -1,7 +1,7 @@
 package delegator
 
 import (
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/ordercost"
 	"fmt"
@@ -12,16 +12,17 @@ import (
 func Delegator(
 	toDelegate chan order.Order,
 	toRedelegate chan order.Order,
-	toTransmitter chan order.Order,
+	toOrderTransmitter chan order.Order,
 	toProcessor chan order.Order,
-	stateUpdates chan elevatorstate.ElevatorState,
-	//peerUpdates chan []string,
+	localStateUpdates chan elevator.Elevator,
+	transmitState chan elevator.Elevator,
+	receiveState chan elevator.Elevator,
 ) {
 
 	redelegations := make(map[int]bool)
-	// peers := make([]string, 0)
-	elevatorStates := make(map[string]elevatorstate.ElevatorState)
+	elevatorStates := make(map[string]elevator.Elevator)
 
+	// TODO stateupdates
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
@@ -34,7 +35,7 @@ func Delegator(
 				break
 			}
 			toProcessor <- orderToDelegate
-			toTransmitter <- orderToDelegate
+			toOrderTransmitter <- orderToDelegate
 
 		case orderToRedelegate := <-toRedelegate:
 			// Redelegate the order if it isn't redelegated already
@@ -56,24 +57,30 @@ func Delegator(
 			}
 
 			toProcessor <- orderToRedelegate
-			toTransmitter <- orderToRedelegate
+			toOrderTransmitter <- orderToRedelegate
 
-		case state := <-stateUpdates:
-			if !state.IsValid() {
-				fmt.Printf("Invalid state incoming! state: %#v", state)
+		case elev := <-localStateUpdates:
+			if !elev.IsValid() {
+				fmt.Printf("Invalid elev incoming! elev: %#v", elev)
 				break
 			}
-			// TODO: Possibly add timestamp for state, only accept states that are
+			// TODO: Possibly add timestamp for elev, only accept states that are
 			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
-			elevatorStates[state.ElevatorID] = state
+			elevatorStates[elev.ElevatorID] = elev
 
-			// case peerUpdate := <-peerUpdates:
-			// 	peers = peerUpdate
+		case elev := <-receiveState:
+			if !elev.IsValid() {
+				fmt.Printf("Invalid local elev incoming! elev: %#v", elev)
+				break
+			}
+			// TODO: Possibly add timestamp for elev, only accept states that are
+			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
+			elevatorStates[elev.ElevatorID] = elev
 		}
 	}
 }
 
-func bestRecipent(o order.Order, states map[string]elevatorstate.ElevatorState, disallowed string) (string, error) {
+func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed string) (string, error) {
 	bestElevatorID := ""
 	bestCost := 10000 // TODO: Refactor
 
@@ -91,7 +98,7 @@ func bestRecipent(o order.Order, states map[string]elevatorstate.ElevatorState, 
 
 	if bestElevatorID == "" {
 		err := fmt.Errorf("Did not any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
-		return elevatorstate.GetMyElevatorID(), err
+		return elevator.GetMyElevatorID(), err
 	}
 
 	return bestElevatorID, nil

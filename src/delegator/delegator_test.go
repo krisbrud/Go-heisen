@@ -1,7 +1,7 @@
 package delegator
 
 import (
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"testing"
 )
@@ -12,7 +12,7 @@ func TestDelegator(t *testing.T) {
 	toRedelegate := make(chan order.Order)
 	toTransmitter := make(chan order.Order)
 	toProcessor := make(chan order.Order)
-	stateUpdates := make(chan elevatorstate.ElevatorState)
+	stateUpdates := make(chan elevator.Elevator)
 
 	go Delegator(
 		toDelegate,
@@ -62,11 +62,11 @@ func makeTopFloorOrder() order.Order {
 	}
 }
 
-func getStateIdleAtFloor(floor int, id string) elevatorstate.ElevatorState {
-	return elevatorstate.ElevatorState{
-		CurrentFloor: floor,
-		AtFloor:      true,
-		IntendedDir:  elevatorstate.Idle,
-		ElevatorID:   id,
+func getStateIdleAtFloor(floor int, id string) elevator.Elevator {
+	return elevator.Elevator{
+		Floor:       floor,
+		IntendedDir: elevator.MD_Stop,
+		Behaviour:   elevator.EB_Idle,
+		ElevatorID:  id,
 	}
 }

@@ -1,71 +1,77 @@
 package controller
 
 import (
-	"Go-heisen/src/elevatorio"
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
+	"Go-heisen/src/elevio"
 	"Go-heisen/src/order"
 	"math"
 	"time"
 )
 
 const (
-	doorDuration = 3 * time.Second
+	doorDuration  = 3 * time.Second
+	orderCapacity = 100
 )
 
 func Controller(
 	incomingOrders chan order.Order,
-	createOrder chan elevatorio.ButtonEvent,
-	stateUpdates chan elevatorstate.ElevatorState,
-	toArrivedFloorHandler chan elevatorstate.ElevatorState,
+	buttonPushes chan elevator.ButtonEvent,
+	stateUpdates chan elevator.Elevator,
+	toArrivedFloorHandler chan elevator.Elevator,
 	// TODO config
 ) {
-	elevatorio.Init("localhost:15657", 4)
+	elevio.Init("localhost:15657", 4)
 
-	buttonUpdates := make(chan elevatorio.ButtonEvent)
+	buttonUpdates := make(chan elevator.ButtonEvent)
 	floorUpdates := make(chan int)
 
-	go elevatorio.PollButtons(buttonUpdates)
-	go elevatorio.PollFloorSensor(floorUpdates)
+	go elevio.PollButtons(buttonUpdates)
+	go elevio.PollFloorSensor(floorUpdates)
 
 	/* void fsm_onInitBetweenFloors(void){
-		outputDevice.motorDirection(D_Down);
-		elev.dirn = D_Down;
-		elev.behaviour = EB_Moving;
+		outputDevice.motorDirection(elevator.MD_Down);
+		elev.IntendedDir = elevator.MD_Down;
+		elev.Behaviour = EB_Moving;
 	} */
 
 	// elev := initialize elev between floors
 
+	elev := elevator.MakeInvalidState()
+
 	// Initialize timer for doors
 	doorTimer := time.NewTimer(math.MaxInt64)
 	doorTimer.Stop()
+
+	activeOrders := make([]order.Order, 0, orderCapacity)
 
 	for {
 		select {
 		case buttonEvent := <-buttonUpdates:
 			// Print state?
 
-			switch { // Cases are mutually exclusive
-			case elev.IsDoorOpen():
+			switch elev.Behaviour { // Cases are mutually exclusive
+			case elevator.EB_DoorOpen:
 				if elev.Floor == buttonEvent.Floor {
 					doorTimer.Reset(doorDuration)
 					// timer_start(elev.config.doorOpenDuration_s);
 				} else {
-					createOrder <- buttonEvent
+					buttonPushes <- buttonEvent
 				}
 
-			case elev.IsMoving():
-				createOrder <- buttonEvent
+			case elevator.EB_Moving:
+				buttonPushes <- buttonEvent
 
-			case elev.IsIdle():
-				if elev.Floor == btn_floor {
-					elevatorio.SetDoorOpenLamp(true)
+			case elevator.EB_Idle:
+				if elev.Floor == buttonEvent.Floor {
+					elevio.SetDoorOpenLamp(true)
 					doorTimer.Reset(doorDuration)
-					// elev.behaviour = EB_DoorOpen; // TODO refactor
+					// elev.Behaviour = EB_DoorOpen; // TODO refactor
 				} else {
-					createOrder <- buttonEvent
-					elev.dirn = chooseDirection(elev)
-					elevatorio.SetMotorDirection(elev.dirn)
-					elev.behaviour = EB_Moving
+					buttonPushes <- buttonEvent
+					nextDir := chooseDirection(elev, activeOrders)
+					elev.IntendedDir = nextDir
+					elevio.SetMotorDirection(elev.IntendedDir)
+					elev.Behaviour = elevator.EB_Moving
 				}
 			}
 
@@ -80,36 +86,36 @@ func Controller(
 			// TODO maybe print something
 
 			elev.Floor = newFloor
-			elevatorio.SetFloorIndicator(elev.Floor)
+			elevio.SetFloorIndicator(elev.Floor)
 
-			if elev.IsMoving() && shouldStop(elev) {
+			if elev.Behaviour == elevator.EB_Moving && shouldStop(elev, activeOrders) {
 				// Clear the orders we have fulfilled
 				toArrivedFloorHandler <- elev
 
 				// Stop the elevator
-				elevatorio.SetMotorDirection(elevatorio.MD_Stop)
+				elevio.SetMotorDirection(elevator.MD_Stop)
 
 				// Open the door
-				elevatorio.SetDoorOpenLamp(true)
+				elevio.SetDoorOpenLamp(true)
 				doorTimer.Reset(doorDuration)
-				elev.behaviour = EB_DoorOpen
+				elev.Behaviour = elevator.EB_DoorOpen
 
 				// setAllLights(elev);
 			}
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
-			elevatorio.SetDoorOpenLamp(false)
+			elevio.SetDoorOpenLamp(false)
 
 			// Find and set motor direction
-			elev.dirn = chooseDirection(elev)
-			elevatorio.SetMotorDirection(elev.dirn)
+			elev.IntendedDir = chooseDirection(elev, activeOrders)
+			elevio.SetMotorDirection(elev.IntendedDir)
 
-			// Set the behaviour accordingly
-			if elev.IsMotorStopped() {
-				elev.SetBehaviourIdle()
+			// Set the Behaviour accordingly
+			if elev.IntendedDir == elevator.MD_Stop {
+				elev.Behaviour = elevator.EB_Idle
 			} else {
-				elev.SetBehaviourMoving()
+				elev.Behaviour = elevator.EB_Moving
 			}
 
 			// Possibly print new state
@@ -118,25 +124,27 @@ func Controller(
 	}
 }
 
-func shouldStop(elev elevator.Elevator) bool {
-	switch e.dirn {
-	case D_Down:
-		shouldStopAtOrder := func(o order.Order) {
+func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
+	switch elev.IntendedDir {
+	case elevator.MD_Down:
+		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_UP
+			isOrderBelow := o.Floor < elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isBelow(o, elev.Floor)
+			return (atSameFloor && notOppositeDirection) || !isOrderBelow
 		}
-		return anyOrder(elev.ActiveOrders, shouldStopAtOrder)
+		return anyOrder(activeOrders, shouldStopAtOrder)
 
-	case D_Up:
-		shouldStopAtOrder := func(o order.Order) {
+	case elevator.MD_Up:
+		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_DOWN
+			isOrderAbove := o.Floor > elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isAbove(o, elev.Floor)
+			return (atSameFloor && notOppositeDirection) || !isOrderAbove
 		}
-		return anyOrder(elev.ActiveOrders, shouldStopAtOrder)
+		return anyOrder(activeOrders, shouldStopAtOrder)
 	}
 
 	return true // Default
@@ -146,38 +154,45 @@ func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) b
 	satisfied := false
 
 	for _, o := range orderList {
-		satisfied = satisfied | filterFunc(o)
+		satisfied = satisfied || predicateFunc(o)
 	}
 
 	return satisfied
 }
 
-func isAbove(o order.Order, floor int) bool {
-	return o.Floor > elev.Floor
-}
-
-func isBelow(o order.Order) bool {
-	return o.Floor < elev.Floor
-}
-
-func chooseDirection(elev elevator.Elevator) {
-	switch {
-	case elev.dirn == D_Up:
-		switch {
-		case anyOrder(elev.ActiveOrders, isAbove):
-			return D_Up
-		case anyOrder(elev.ActiveOrders, isBelow):
-			return D_Down
-		}
-
-	case elev.Dirn == D_Up || elev.Dirn == D_Down:
-		switch {
-		case anyOrder(elev.ActiveOrders, isBelow):
-			return D_Down
-		case anyOrder(elev.ActiveOrders, isAbove):
-			return D_Up
-		}
-	default:
-		return D_Stop // Default case
+func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {
+	isAbove := func(o order.Order) bool {
+		return o.Floor > elev.Floor
 	}
+
+	return anyOrder(activeOrders, isAbove)
+}
+
+func ordersBelow(elev elevator.Elevator, activeOrders []order.Order) bool {
+	isBelow := func(o order.Order) bool {
+		return o.Floor < elev.Floor
+	}
+
+	return anyOrder(activeOrders, isBelow)
+}
+
+func chooseDirection(elev elevator.Elevator, activeOrders []order.Order) elevator.MotorDirection {
+	switch elev.IntendedDir {
+	case elevator.MD_Up:
+		switch {
+		case ordersAbove(elev, activeOrders):
+			return elevator.MD_Up
+		case ordersBelow(elev, activeOrders):
+			return elevator.MD_Down
+		}
+
+	case elevator.MD_Down, elevator.MD_Stop:
+		switch {
+		case ordersBelow(elev, activeOrders):
+			return elevator.MD_Down
+		case ordersAbove(elev, activeOrders):
+			return elevator.MD_Up
+		}
+	}
+	return elevator.MD_Stop // Default case
 }

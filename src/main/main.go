@@ -8,17 +8,16 @@ import (
 	"Go-heisen/src/buttonpushhandler"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
-	"Go-heisen/src/elevatorstate"
-	"Go-heisen/src/networkreceiver"
-	"Go-heisen/src/networktransmitter"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/watchdog"
+
+	"github.com/TTK4145/Network-go/network/bcast"
 )
 
 func main() {
-
 	restartSystem := make(chan bool)
 
 	go startSystem(restartSystem)
@@ -37,40 +36,42 @@ func startSystem(restartSystem chan bool) {
 	restart := make(chan bool)
 
 	// ArrivedFloorHandler
-	arrivedStateUpdates := make(chan elevatorstate.ElevatorState)
-	arrivedRepoReads := make(chan order.Order)
+	arrivedStateUpdates := make(chan elevator.Elevator)
 	// ButtonPushHandler
-	buttonPushOrders := make(chan order.Order)
-	buttonRepoReads := make(chan order.Order)
-	// Controller - None yet!
+	buttonPushes := make(chan elevator.ButtonEvent)
+	// Controller
 	toController := make(chan order.Order)
 	// Delegator
-	toDelegator := make(chan order.Order)
-	// LightManager
-	toLightManager := make(chan order.Order)
+	localStateUpdates := make(chan elevator.Elevator)
+	toDelegate := make(chan order.Order)
+	toRedelegate := make(chan order.Order)
 	// OrderRepository
-	repoReadRequests := make(chan orderrepository.ReadRequest)
-	processorRepoWrites := make(chan order.Order)
+	readSingleRequests := make(chan orderrepository.ReadRequest)
+	readAllRequests := make(chan orderrepository.ReadRequest)
+	writeRequests := make(chan orderrepository.WriteRequest)
 	// OrderProcessor
 	toOrderProcessor := make(chan order.Order)
-	processorRepoReads := make(chan order.Order)
-	// NetworkReceiver
-	toTransmitter := make(chan order.Order)
-	// NetworkTransmitter
-	fromReceiver := make(chan order.Order)
-	// Watchdog
-	watchdogRepoReads := make(chan order.Order)
+	// Network
+	transmitOrder := make(chan order.Order)
+	transmitState := make(chan elevator.Elevator)
+	receiveState := make(chan elevator.Elevator)
+
+	orderPort := 44232
+	go bcast.Transmitter(transmitOrder, orderPort)
+	go bcast.Receiver(toOrderProcessor, orderPort)
+
+	statePort := 44233
+	go bcast.Transmitter(transmitState, statePort)
+	go bcast.Receiver(receiveState, statePort)
 
 	// Start goroutines
-	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, repoReadRequests, arrivedRepoReads, toOrderProcessor)
-	go buttonpushhandler.ButtonPushHandler(buttonPushOrders, buttonRepoReads, repoReadRequests, toDelegator)
-	go controller.Controller(toController)
-	go delegator.Delegator(toDelegator, toTransmitter)
-	go orderrepository.OrderRepository(repoReadRequests, processorRepoWrites, processorRepoReads, buttonRepoReads, arrivedRepoReads, watchdogRepoReads)
-	go orderprocessor.OrderProcessor(toOrderProcessor, toTransmitter, repoReadRequests, processorRepoReads, processorRepoWrites, toController, toLightManager)
-	go networkreceiver.NetworkReceiver(fromReceiver)
-	go networktransmitter.NewtorkTransmitter(toTransmitter)
-	go watchdog.Watchdog(repoReadRequests, toDelegator, toTransmitter)
+	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, readSingleRequests, toOrderProcessor)
+	go buttonpushhandler.ButtonPushHandler(buttonPushes, readAllRequests, toDelegate)
+	go controller.Controller(toController, buttonPushes, localStateUpdates, arrivedStateUpdates)
+	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, localStateUpdates, transmitState, receiveState)
+	go orderrepository.OrderRepository(readSingleRequests, readAllRequests, writeRequests)
+	go orderprocessor.OrderProcessor(toOrderProcessor, readSingleRequests, writeRequests, toController, transmitOrder)
+	go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
 
 	tick := time.Tick(1000 * time.Millisecond) // 1 second
 

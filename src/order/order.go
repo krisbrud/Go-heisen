@@ -7,7 +7,7 @@ import (
 
 type OrderClass int
 
-// TODO: Elevatorio or this so there are no double definitions!
+// TODO: elevio or this so there are no double definitions!
 const (
 	HALL_UP OrderClass = iota
 	HALL_DOWN

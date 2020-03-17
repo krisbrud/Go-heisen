@@ -1,7 +1,7 @@
 package ordercost
 
 import (
-	"Go-heisen/src/elevatorstate"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"fmt"
 	"testing"
@@ -43,11 +43,12 @@ func getMockFloorZeroCabUpOrder() order.Order {
 	}
 }
 
-func getMockElevatorStateFirstFloorUp() elevatorstate.ElevatorState {
-	return elevatorstate.ElevatorState{
-		CurrentFloor: 1,
-		AtFloor:      false,
-		IntendedDir:  elevatorstate.Up,
+func getMockElevatorStateFirstFloorUp() elevator.Elevator {
+	return elevator.Elevator{
+		Floor:       1,
+		IntendedDir: elevator.MD_Up,
+		Behaviour:   elevator.EB_Moving,
+		ElevatorID:  "SomeElevator",
 	}
 }
 
@@ -61,14 +62,15 @@ func getMockThirdFloorCabCall() order.Order {
 	}
 }
 
-func getMockElevatorStateAtThirdFloor() elevatorstate.ElevatorState {
-	return elevatorstate.ElevatorState{
-		CurrentFloor: 3,
-		AtFloor:      true,
-		IntendedDir:  elevatorstate.Idle,
+func getMockElevatorStateAtThirdFloor() elevator.Elevator {
+	return elevator.Elevator{
+		Floor:       3,
+		IntendedDir: elevator.MD_Stop,
+		Behaviour:   elevator.EB_Idle,
+		ElevatorID:  "SomeElevator",
 	}
 }
 
-func makeCostErrorString(o order.Order, es elevatorstate.ElevatorState, gotCost int, correctCost int) string {
+func makeCostErrorString(o order.Order, es elevator.Elevator, gotCost int, correctCost int) string {
 	return fmt.Sprintf("Cost of order %#v while in state %#v should be %v, but was: %v", o, es, correctCost, gotCost)
 }
