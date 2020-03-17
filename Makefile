@@ -3,6 +3,10 @@
 #	runelevator
 #	build?
 
+.PHONY: run
+run:
+	go run src/main/main.go
+
 .PHONY: test
 test:
 	go test ./...
