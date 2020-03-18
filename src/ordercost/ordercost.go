@@ -20,7 +20,7 @@ const (
 )
 
 func Cost(o order.Order, es elevator.Elevator) int {
-	if !o.IsValid() || !o.IsMine() || !es.IsValid() { // TODO - check what happens if removing ismine
+	if !o.IsValid() || !es.IsValid() || (o.IsFromCab() && !o.IsMine()) { // TODO - check what happens if removing ismine
 		// TODO panic/restart
 		return maxCost
 	}

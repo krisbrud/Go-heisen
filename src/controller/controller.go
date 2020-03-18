@@ -102,6 +102,7 @@ func Controller(
 
 				// setAllLights(elev);
 			}
+			stateUpdates <- elev
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.

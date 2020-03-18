@@ -69,12 +69,20 @@ func (dir MotorDirection) Opposite() MotorDirection {
 
 func (elev Elevator) IsDoorOpen() bool { return elev.Behaviour == EB_DoorOpen }
 
+func UninitializedElevatorBetweenFloors() Elevator {
+	return Elevator{
+		Floor:       bottomFloor - 1,
+		IntendedDir: MD_Down,
+		Behaviour:   EB_Idle,
+		ElevatorID:  GetMyElevatorID(),
+	}
+}
+
 func MakeInvalidState() Elevator {
 	return Elevator{
 		Floor:       bottomFloor - 1,
 		IntendedDir: MD_Stop,
-		// ActiveOrders: make([]order.Order, orderCapacity), // TODO put somewhere else
-		Behaviour: EB_Idle,
+		Behaviour:   EB_Idle,
 	}
 }
 

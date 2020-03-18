@@ -1,9 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"time"
 
+	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/arrivedfloorhandler"
 	"Go-heisen/src/buttonpushhandler"
 	"Go-heisen/src/controller"
@@ -13,24 +15,28 @@ import (
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/watchdog"
-
-	"github.com/TTK4145/Network-go/network/bcast"
 )
 
 func main() {
 	restartSystem := make(chan bool)
 
-	go startSystem(restartSystem)
+	var elevatorPort int
+	flag.IntVar(&elevatorPort, "port", 15657, "Port for connection to elevator")
+	flag.Parse()
+
+	fmt.Printf("ElevatorPort %v\n", elevatorPort)
+
+	go startSystem(restartSystem, elevatorPort)
 
 	for {
 		select {
 		case <-restartSystem:
-			go startSystem(restartSystem)
+			go startSystem(restartSystem, elevatorPort)
 		}
 	}
 }
 
-func startSystem(restartSystem chan bool) {
+func startSystem(restartSystem chan bool, elevatorPort int) {
 
 	// Declare channels, organized after who reads them
 	restart := make(chan bool)
@@ -57,12 +63,12 @@ func startSystem(restartSystem chan bool) {
 	receiveState := make(chan elevator.Elevator)
 
 	orderPort := 44232
-	go bcast.Transmitter(transmitOrder, orderPort)
-	go bcast.Receiver(toOrderProcessor, orderPort)
+	go bcast.Transmitter(orderPort, transmitOrder)
+	go bcast.Receiver(orderPort, toOrderProcessor)
 
 	statePort := 44233
-	go bcast.Transmitter(transmitState, statePort)
-	go bcast.Receiver(receiveState, statePort)
+	go bcast.Transmitter(statePort, transmitState)
+	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
 	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, readSingleRequests, toOrderProcessor)
