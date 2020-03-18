@@ -37,22 +37,34 @@ func Controller(
 
 	// elev := initialize elev between floors
 
+	// Initialize internal elevator state
 	elev := elevator.UninitializedElevatorBetweenFloors()
-	stateUpdates <- elev
+
+	// Run elevator downwards if no state update
+	select {
+	case newFloor := <-floorUpdates:
+		// Send the floor update again on the channel so the normal handler may do it's routine
+		go func() { floorUpdates <- newFloor }()
+	case <-time.After(200 * time.Millisecond):
+		// Elevator initialized between floors, go downwards.
+		elev.IntendedDir = elevator.MD_Down
+		elev.Behaviour = elevator.EB_Moving
+		elevio.SetMotorDirection(elevator.MD_Down)
+	}
 
 	// Initialize timer for doors
 	doorTimer := time.NewTimer(math.MaxInt64)
 	doorTimer.Stop()
 
-	activeOrders := make([]order.Order, 0, orderCapacity)
+	activeOrders := make(order.OrderList, 0, orderCapacity)
 
 	for {
 		select {
 		case buttonEvent := <-buttonUpdates:
 			// Print state?
 			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
-			fmt.Printf("Elevator: %v", elev)
-			fmt.Println("ActiveOrders:", activeOrders)
+			elev.Print()
+			activeOrders.Print()
 
 			if !elev.IsValid() {
 				continue
@@ -83,8 +95,9 @@ func Controller(
 					elev.Behaviour = elevator.EB_Moving
 				}
 			}
-
-			stateUpdates <- elev
+			if elev.IsValid() {
+				stateUpdates <- elev
+			}
 
 			// setAllLights(elev); // Set on incomingorder and completed order instead
 
@@ -112,8 +125,9 @@ func Controller(
 
 				// setAllLights(elev);
 			}
-
-			stateUpdates <- elev
+			if elev.IsValid() {
+				stateUpdates <- elev
+			}
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
@@ -133,24 +147,46 @@ func Controller(
 			// Possibly print new state
 
 		case newOrder := <-incomingOrders:
+			fmt.Printf("\nNew order in controller: %v\nElevator: %v", newOrder.String(), elev.String())
 			if !newOrder.IsValid() {
 				fmt.Println("Controller received invalid order", newOrder)
 			}
 
-			if newOrder.IsMine() && !newOrder.Completed {
-				activeOrders = append(activeOrders, newOrder)
+			if newOrder.IsMine() {
+				if !newOrder.Completed {
+					activeOrders = append(activeOrders, newOrder)
 
-				// Choose direction and execute
-				nextDir := chooseDirection(elev, activeOrders)
-				elev.IntendedDir = nextDir
-				elevio.SetMotorDirection(elev.IntendedDir)
-				elev.Behaviour = elevator.EB_Moving
+					// Choose direction and execute
+					nextDir := chooseDirection(elev, activeOrders)
+					elev.IntendedDir = nextDir
+					elevio.SetMotorDirection(elev.IntendedDir)
+					elev.Behaviour = elevator.EB_Moving
+				} else {
+					// Remove from queue
+					fmt.Println("Removing order from queue!")
+					newOrder.Print()
+					activeOrders = removeEquivalentOrders(activeOrders, newOrder)
+				}
 			}
 
 			// Set lights for order
 			elevio.SetButtonLamp(elevator.ButtonType(newOrder.Class), newOrder.Floor, newOrder.Completed)
+			fmt.Printf("\nNew order in controller handled: %s\nElevator: %s", newOrder, elev)
+
 		}
 	}
+}
+
+func removeEquivalentOrders(activeOrders order.OrderList, completedOrder order.Order) order.OrderList {
+	newActiveOrders := make(order.OrderList, 0, orderCapacity)
+
+	for _, existingOrder := range activeOrders {
+		if !order.AreEquivalent(existingOrder, completedOrder) {
+			newActiveOrders = append(newActiveOrders, existingOrder)
+		}
+	}
+
+	return newActiveOrders
 }
 
 func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
@@ -161,7 +197,7 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_UP
 			isOrderBelow := o.Floor < elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isOrderBelow
+			return (atSameFloor && notOppositeDirection) || !isOrderBelow && o.IsMine()
 		}
 		return anyOrder(activeOrders, shouldStopAtOrder)
 
@@ -171,7 +207,7 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_DOWN
 			isOrderAbove := o.Floor > elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isOrderAbove
+			return (atSameFloor && notOppositeDirection) || !isOrderAbove && o.IsMine()
 		}
 		return anyOrder(activeOrders, shouldStopAtOrder)
 	}
@@ -195,7 +231,7 @@ func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {
 	}
 
 	isAbove := func(o order.Order) bool {
-		return o.Floor > elev.Floor
+		return o.Floor > elev.Floor && o.IsMine()
 	}
 
 	return anyOrder(activeOrders, isAbove)
@@ -207,7 +243,7 @@ func ordersBelow(elev elevator.Elevator, activeOrders []order.Order) bool {
 	}
 
 	isBelow := func(o order.Order) bool {
-		return o.Floor < elev.Floor
+		return o.Floor < elev.Floor && o.IsMine()
 	}
 
 	return anyOrder(activeOrders, isBelow)

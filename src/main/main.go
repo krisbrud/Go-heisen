@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"strconv"
 
 	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/arrivedfloorhandler"
@@ -19,15 +21,21 @@ import (
 func main() {
 	restartSystem := make(chan bool)
 
-	var elevatorPort int
+	var elevatorPort int = 15657
+	var elevatorID string
 	flag.IntVar(&elevatorPort, "port", 15657, "Port for connection to elevator")
+	flag.StringVar(&elevatorID, "id", "elev"+strconv.Itoa(os.Getppid()), "ID of this elevator")
 	flag.Parse()
+
+	// Set ID of this elevator
+	elevator.SetMyElevatorID(elevatorID)
 
 	fmt.Printf("ElevatorPort %v\n", elevatorPort)
 
 	go startSystem(restartSystem, elevatorPort)
 
 	for {
+		strconv.Itoa(os.Getppid())
 		select {
 		case <-restartSystem:
 			go startSystem(restartSystem, elevatorPort)

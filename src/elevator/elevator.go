@@ -1,6 +1,8 @@
 package elevator
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	orderCapacity = 50
@@ -44,7 +46,11 @@ type Elevator struct {
 }
 
 func (elev Elevator) String() string {
-	return fmt.Sprintf("Order:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n")
+	return fmt.Sprintf("Elevator:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n", elev.Floor, elev.IntendedDir, elev.Behaviour, elev.ElevatorID)
+}
+
+func (elev Elevator) Print() {
+	fmt.Printf(elev.String() + "\n")
 }
 
 var numFloors int = 4
@@ -79,7 +85,7 @@ func UninitializedElevatorBetweenFloors() Elevator {
 	return Elevator{
 		Floor:       bottomFloor - 1,
 		IntendedDir: MD_Down,
-		Behaviour:   EB_Idle,
+		Behaviour:   EB_Moving,
 		ElevatorID:  GetMyElevatorID(),
 	}
 }
@@ -92,6 +98,17 @@ func MakeInvalidState() Elevator {
 	}
 }
 
+var myElevatorID string
+
+func SetMyElevatorID(id string) {
+	myElevatorID = id
+	fmt.Println("Set my ID to", id)
+}
+
 func GetMyElevatorID() string {
-	return "My ElevatorID123" // TODO refactor - maybe a "config" module?
+	if myElevatorID == "" {
+		// ElevatorID not initialized, set to parents process ID
+		panic("Trying to get elevator ID before setting it!")
+	}
+	return myElevatorID // TODO refactor - maybe a "config" module?
 }

@@ -1,6 +1,8 @@
 package order
 
 import (
+	"Go-heisen/src/elevator"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -28,6 +30,25 @@ type Order struct {
 	Class      OrderClass // Defined by iota-"enum"
 	RecipentID string
 	Completed  bool
+}
+
+func (o Order) String() string {
+	return fmt.Sprintf("Order\n\tOrderID: %v\n\tFloor: %v\n\tClass: %v\n\tRecipentID: %v\n\tCompleted: %v\n", o.OrderID, o.Floor, o.Class, o.RecipentID, o.Completed)
+}
+
+func (o Order) Print() { fmt.Println(o.String()) }
+
+type OrderList []Order
+
+func (ol OrderList) Print() {
+	if len(ol) == 0 {
+		fmt.Println("Orders: []")
+	} else {
+		fmt.Println("Orders:")
+		for _, o := range ol {
+			o.Print()
+		}
+	}
 }
 
 func NewInvalidOrder() Order {
@@ -59,7 +80,7 @@ func (o Order) IsValid() bool {
 }
 
 func (o Order) IsMine() bool {
-	return true // TODO: Update this
+	return o.RecipentID == elevator.GetMyElevatorID() // TODO: Update this
 }
 
 func (o Order) IsFromHall() bool {
