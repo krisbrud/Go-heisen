@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"time"
 
 	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/arrivedfloorhandler"
@@ -73,18 +72,18 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	// Start goroutines
 	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, readSingleRequests, toOrderProcessor)
 	go buttonpushhandler.ButtonPushHandler(buttonPushes, readAllRequests, toDelegate)
-	go controller.Controller(toController, buttonPushes, localStateUpdates, arrivedStateUpdates)
+	go controller.Controller(toController, buttonPushes, localStateUpdates, arrivedStateUpdates, elevatorPort)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, localStateUpdates, transmitState, receiveState)
 	go orderrepository.OrderRepository(readSingleRequests, readAllRequests, writeRequests)
 	go orderprocessor.OrderProcessor(toOrderProcessor, readSingleRequests, writeRequests, toController, transmitOrder)
 	go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
 
-	tick := time.Tick(1000 * time.Millisecond) // 1 second
+	// tick := time.Tick(1000 * time.Millisecond) // 1 second
 
 	for {
 		select {
-		case <-tick:
-			fmt.Println("Tick!") // Needed currently to prevent deadlock...
+		// case <-tick:
+		// 	fmt.Println("Tick!") // Needed currently to prevent deadlock...
 		case <-restart:
 			// Something wrong happened, restart the system
 			break

@@ -26,6 +26,8 @@ func Delegator(
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
+			fmt.Println("Received order to delegate!", orderToDelegate)
+
 			// Find best recipent for order based on current belief state
 			recipent, err := bestRecipent(orderToDelegate, elevatorStates, "")
 			orderToDelegate.RecipentID = recipent
@@ -60,6 +62,7 @@ func Delegator(
 			toOrderTransmitter <- orderToRedelegate
 
 		case elev := <-localStateUpdates:
+			fmt.Printf("\nIncoming elevator state in Delegator: %#v\n", elev)
 			if !elev.IsValid() {
 				fmt.Printf("Invalid elev incoming! elev: %#v", elev)
 				break

@@ -17,6 +17,7 @@ func ButtonPushHandler(
 	for {
 		select {
 		case buttonEvent := <-buttonPush:
+			fmt.Println("ButtonPushHandler")
 			// Make order based on button push
 			o := makeUnassignedOrder(buttonEvent)
 

@@ -3,6 +3,12 @@
 #	runelevator
 #	build?
 
+.PHONY: singlesim
+singlesim:
+	gnome-terminal -- SimElevatorServer  --port 14100
+	sleep 0.5
+	gnome-terminal -- go run src/main/main.go --port 14100
+
 .PHONY: simulators
 simulators:
 	gnome-terminal -- SimElevatorServer  --port 14100

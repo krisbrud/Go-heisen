@@ -30,10 +30,20 @@ func Watchdog(
 	for {
 		select {
 		case <-ticker.C: // New tick
+
 			readAllActiveReq := orderrepository.MakeReadAllActiveRequest()
 			readAllActiveRequests <- readAllActiveReq
 
 			for activeOrder := range readAllActiveReq.ResponseCh {
+				// fmt.Println("Watchdog tick!")
+				// fmt.Printf("Active order: %#v\nValidity %v", activeOrder, activeOrder.IsValid())
+
+				if !activeOrder.IsValid() {
+					break
+				}
+
+				// fmt.Println("Past break")
+
 				// Check if order already has timestamp
 				id := activeOrder.OrderID
 				orderTimeStamp, alreadyRegistered := timestamps[id]

@@ -4,6 +4,7 @@ import (
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/elevio"
 	"Go-heisen/src/order"
+	"fmt"
 	"math"
 	"time"
 )
@@ -18,9 +19,9 @@ func Controller(
 	buttonPushes chan elevator.ButtonEvent,
 	stateUpdates chan elevator.Elevator,
 	toArrivedFloorHandler chan elevator.Elevator,
-	// TODO config
+	elevatorPort int,
 ) {
-	elevio.Init("localhost:15657", 4)
+	elevio.Init(fmt.Sprintf("localhost:%v", elevatorPort), 4)
 
 	buttonUpdates := make(chan elevator.ButtonEvent)
 	floorUpdates := make(chan int)
@@ -36,7 +37,8 @@ func Controller(
 
 	// elev := initialize elev between floors
 
-	elev := elevator.MakeInvalidState()
+	elev := elevator.UninitializedElevatorBetweenFloors()
+	stateUpdates <- elev
 
 	// Initialize timer for doors
 	doorTimer := time.NewTimer(math.MaxInt64)
@@ -48,6 +50,13 @@ func Controller(
 		select {
 		case buttonEvent := <-buttonUpdates:
 			// Print state?
+			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
+			fmt.Printf("Elevator: %v", elev)
+			fmt.Println("ActiveOrders:", activeOrders)
+
+			if !elev.IsValid() {
+				continue
+			}
 
 			switch elev.Behaviour { // Cases are mutually exclusive
 			case elevator.EB_DoorOpen:
@@ -84,6 +93,7 @@ func Controller(
 
 		case newFloor := <-floorUpdates:
 			// TODO maybe print something
+			fmt.Printf("Floor update: %#v\n", newFloor)
 
 			elev.Floor = newFloor
 			elevio.SetFloorIndicator(elev.Floor)
@@ -102,6 +112,7 @@ func Controller(
 
 				// setAllLights(elev);
 			}
+
 			stateUpdates <- elev
 
 		case <-doorTimer.C:
@@ -121,6 +132,23 @@ func Controller(
 
 			// Possibly print new state
 
+		case newOrder := <-incomingOrders:
+			if !newOrder.IsValid() {
+				fmt.Println("Controller received invalid order", newOrder)
+			}
+
+			if newOrder.IsMine() && !newOrder.Completed {
+				activeOrders = append(activeOrders, newOrder)
+
+				// Choose direction and execute
+				nextDir := chooseDirection(elev, activeOrders)
+				elev.IntendedDir = nextDir
+				elevio.SetMotorDirection(elev.IntendedDir)
+				elev.Behaviour = elevator.EB_Moving
+			}
+
+			// Set lights for order
+			elevio.SetButtonLamp(elevator.ButtonType(newOrder.Class), newOrder.Floor, newOrder.Completed)
 		}
 	}
 }
@@ -162,6 +190,10 @@ func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) b
 }
 
 func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {
+	if len(activeOrders) == 0 {
+		return false
+	}
+
 	isAbove := func(o order.Order) bool {
 		return o.Floor > elev.Floor
 	}
@@ -170,6 +202,10 @@ func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {
 }
 
 func ordersBelow(elev elevator.Elevator, activeOrders []order.Order) bool {
+	if len(activeOrders) == 0 {
+		return false
+	}
+
 	isBelow := func(o order.Order) bool {
 		return o.Floor < elev.Floor
 	}

@@ -45,6 +45,7 @@ func OrderRepository(
 			if !ok {
 				// Order does not exist, inform Reader by sending invalid order back
 				storedOrder = order.NewInvalidOrder()
+				//fmt.Printf("Could not find order \n%#v\n in orderrepo! Returning invalid order.\n", storedOrder)
 			}
 
 			readReq.ResponseCh <- storedOrder // Send order back to requester

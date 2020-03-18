@@ -18,6 +18,8 @@ func OrderProcessor(
 		select {
 		case incomingOrder := <-incomingOrdersChan:
 			go func() {
+				fmt.Printf("\nIncoming order in processor! %v\n", incomingOrder)
+
 				if !incomingOrder.IsValid() {
 					return // Ignore the incoming order
 				}
@@ -46,6 +48,7 @@ func OrderProcessor(
 					// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
 					writeReq := orderrepository.MakeWriteRequest(incomingOrder)
 					repoWriteRequests <- writeReq
+					fmt.Println("Trying to write new order to processor")
 					if <-writeReq.SuccessCh {
 						toController <- incomingOrder
 						toTransmitter <- incomingOrder

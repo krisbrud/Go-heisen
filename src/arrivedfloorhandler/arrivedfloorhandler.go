@@ -17,6 +17,8 @@ func ArrivedFloorHandler(
 		select {
 		case newState := <-stateUpdates:
 			go func() {
+				fmt.Printf("ArrivedFloorHandler! State: %#v", newState)
+
 				if !newState.IsValid() {
 					fmt.Println("New state not valid!")
 					// TODO restart
@@ -32,6 +34,10 @@ func ArrivedFloorHandler(
 
 				for activeOrder := range readAllReq.ResponseCh {
 					if activeOrder.Floor == newState.Floor {
+						// if !activeOrder.IsValid() {
+						// 	break
+						// }
+
 						if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 							// We have completed this order, make OrderProcessor register it and tell everyone.
 							activeOrder.SetCompleted()

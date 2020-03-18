@@ -1,5 +1,7 @@
 package elevator
 
+import "fmt"
+
 const (
 	orderCapacity = 50
 )
@@ -39,6 +41,10 @@ type Elevator struct {
 	Behaviour   ElevatorBehaviour
 	ElevatorID  string
 	// ActiveOrders []order.Order
+}
+
+func (elev Elevator) String() string {
+	return fmt.Sprintf("Order:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n")
 }
 
 var numFloors int = 4
