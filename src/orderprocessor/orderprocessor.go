@@ -18,7 +18,8 @@ func OrderProcessor(
 		select {
 		case incomingOrder := <-incomingOrdersChan:
 			go func() {
-				fmt.Printf("\nIncoming order in processor! %v\n", incomingOrder)
+				fmt.Printf("\nIncoming order in processor!\n")
+				incomingOrder.Print()
 
 				if !incomingOrder.IsValid() {
 					return // Ignore the incoming order

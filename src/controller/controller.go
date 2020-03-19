@@ -44,9 +44,11 @@ func Controller(
 	select {
 	case newFloor := <-floorUpdates:
 		// Send the floor update again on the channel so the normal handler may do it's routine
+		fmt.Println("Floor update received, sending state back!")
 		go func() { floorUpdates <- newFloor }()
 	case <-time.After(200 * time.Millisecond):
 		// Elevator initialized between floors, go downwards.
+		fmt.Println("Started between floors!")
 		elev.IntendedDir = elevator.MD_Down
 		elev.Behaviour = elevator.EB_Moving
 		elevio.SetMotorDirection(elevator.MD_Down)
@@ -195,21 +197,19 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_UP
-			isOrderBelow := o.Floor < elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isOrderBelow && o.IsMine()
+			return atSameFloor && notOppositeDirection && o.IsMine()
 		}
-		return anyOrder(activeOrders, shouldStopAtOrder)
+		return anyOrder(activeOrders, shouldStopAtOrder) || !ordersBelow(elev, activeOrders)
 
 	case elevator.MD_Up:
 		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
 			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_DOWN
-			isOrderAbove := o.Floor > elev.Floor
 
-			return (atSameFloor && notOppositeDirection) || !isOrderAbove && o.IsMine()
+			return atSameFloor && notOppositeDirection && o.IsMine()
 		}
-		return anyOrder(activeOrders, shouldStopAtOrder)
+		return anyOrder(activeOrders, shouldStopAtOrder) || !ordersAbove(elev, activeOrders)
 	}
 
 	return true // Default

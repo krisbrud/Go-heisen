@@ -63,7 +63,8 @@ func Delegator(
 			toOrderTransmitter <- orderToRedelegate
 
 		case elev := <-localStateUpdates:
-			fmt.Printf("\nIncoming elevator state in Delegator: %#v\n", elev.String())
+			fmt.Printf("\nIncoming elevator state in Delegator: %#v\n")
+			elev.Print()
 			if !elev.IsValid() {
 				fmt.Printf("Invalid elev incoming! elev: %#v", elev.String())
 				break
@@ -72,9 +73,17 @@ func Delegator(
 			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
 			elevatorStates[elev.ElevatorID] = elev
 
+			// Notify other elevators about state
+			go func() {
+				transmitState <- elev
+			}()
+
 		case elev := <-receiveState:
+			fmt.Println("Received state from other elevator!")
+			elev.Print()
 			if !elev.IsValid() {
-				fmt.Printf("Invalid local elev incoming! elev: %#v", elev.String())
+				fmt.Printf("Invalid elev incoming!")
+				elev.Print()
 				break
 			}
 			// TODO: Possibly add timestamp for elev, only accept states that are
