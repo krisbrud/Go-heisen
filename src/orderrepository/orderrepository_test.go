@@ -7,20 +7,10 @@ import (
 )
 
 func TestOrderRepository(t *testing.T) {
-	readSingleRequests := make(chan ReadRequest)
-	readAllRequests := make(chan ReadRequest)
-	writeRequests := make(chan WriteRequest)
 
-	go OrderRepository(readSingleRequests, readAllRequests, writeRequests)
+	repo := MakeEmptyOrderRepository()
 
-	nonExistingID := 12364
-	myReadReq := MakeReadRequest(nonExistingID)
-
-	readSingleRequests <- myReadReq
-
-	if result := <-myReadReq.ResponseCh; result.IsValid() {
-		t.Errorf("Order that should not exist exists!: %v", result)
-	}
+	nonExistingID := order.OrderIDType(12364)
 
 	// Test writing some order and reading it back
 	someOrder := testutils.GetSomeOrder()

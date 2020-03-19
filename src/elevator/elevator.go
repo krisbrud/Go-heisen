@@ -61,9 +61,16 @@ func GetTopFloor() int    { return topFloor }
 func GetBottomFloor() int { return bottomFloor }
 func GetNumFloors() int   { return numFloors }
 
+// TODO setconfiguration?
+
 // IsValid tells us if both fields of Elevator are valid given the current configuration
 func (elev Elevator) IsValid() bool {
 	return bottomFloor <= elev.Floor && elev.Floor <= topFloor
+}
+
+func (be ButtonEvent) IsValid() bool {
+	return bottomFloor <= be.Floor && be.Floor <= topFloor &&
+		be.Button == BT_HallUp || be.Button == BT_HallDown || be.Button == BT_Cab
 }
 
 func (elev Elevator) IsIdle() bool { return elev.Behaviour == EB_Idle }

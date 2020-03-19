@@ -8,7 +8,6 @@ import (
 
 	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/arrivedfloorhandler"
-	"Go-heisen/src/buttonpushhandler"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
 	"Go-heisen/src/elevator"
@@ -46,10 +45,8 @@ func main() {
 func startSystem(restartSystem chan bool, elevatorPort int) {
 
 	// Declare channels, organized after who reads them
-	restart := make(chan bool)
-
 	// ArrivedFloorHandler
-	arrivedStateUpdates := make(chan elevator.Elevator)
+	floorArrivals := make(chan elevator.Elevator)
 	// ButtonPushHandler
 	buttonPushes := make(chan elevator.ButtonEvent)
 	// Controller
@@ -58,10 +55,6 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	localStateUpdates := make(chan elevator.Elevator)
 	toDelegate := make(chan order.Order)
 	toRedelegate := make(chan order.Order)
-	// OrderRepository
-	readSingleRequests := make(chan orderrepository.ReadRequest)
-	readAllRequests := make(chan orderrepository.ReadRequest)
-	writeRequests := make(chan orderrepository.WriteRequest)
 	// OrderProcessor
 	toOrderProcessor := make(chan order.Order)
 	// Network
@@ -78,25 +71,15 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, readSingleRequests, toOrderProcessor)
+	go arrivedfloorhandler.ArrivedFloorHandler(floorArrivals, readSingleRequests, toOrderProcessor)
 	go buttonpushhandler.ButtonPushHandler(buttonPushes, readAllRequests, toDelegate)
-	go controller.Controller(toController, buttonPushes, localStateUpdates, arrivedStateUpdates, elevatorPort)
+	go controller.Controller(toController, buttonPushes, localStateUpdates, floorArrivals, elevatorPort)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, localStateUpdates, transmitState, receiveState)
 	go orderrepository.OrderRepository(readSingleRequests, readAllRequests, writeRequests)
 	go orderprocessor.OrderProcessor(toOrderProcessor, readSingleRequests, writeRequests, toController, transmitOrder)
 	go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
 
-	// tick := time.Tick(1000 * time.Millisecond) // 1 second
-
-	for {
-		select {
-		// case <-tick:
-		// 	fmt.Println("Tick!") // Needed currently to prevent deadlock...
-		case <-restart:
-			// Something wrong happened, restart the system
-			break
-		}
-	}
-
+	// Block such that goroutine does not exit
+	<-restartSystem
 	restartSystem <- true
 }

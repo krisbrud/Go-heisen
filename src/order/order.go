@@ -8,6 +8,7 @@ import (
 )
 
 type OrderClass int
+type OrderIDType int
 
 // TODO: elevio or this so there are no double definitions!
 const (
@@ -25,7 +26,7 @@ const (
 )
 
 type Order struct {
-	OrderID    int
+	OrderID    OrderIDType
 	Floor      int
 	Class      OrderClass // Defined by iota-"enum"
 	RecipentID string
@@ -61,16 +62,26 @@ func NewInvalidOrder() Order {
 	}
 }
 
+func MakeUnassignedOrder(pushedButton elevator.ButtonEvent) Order {
+	return Order{
+		OrderID:    GetRandomID(),
+		Floor:      pushedButton.Floor,
+		Class:      OrderClass(pushedButton.Button), // TODO Verify that definitions are the same
+		RecipentID: "",
+		Completed:  false,
+	}
+}
+
 var idGeneratorSeeded = false
 
-func GetRandomID() int {
+func GetRandomID() OrderIDType {
 	// TODO: Add mutex
 	if !idGeneratorSeeded {
 		rand.Seed(time.Now().UTC().UnixNano())
 		idGeneratorSeeded = true
 	}
 
-	return rand.Int()
+	return OrderIDType(rand.Int())
 }
 
 func (o *Order) SetCompleted() { o.Completed = true }
@@ -91,9 +102,7 @@ func (o Order) IsFromCab() bool {
 	return o.Class == CAB
 }
 
+// AreEquivalent returns true if orders have the same class, floor and completion status
 func AreEquivalent(a, b Order) bool {
 	return a.Class == b.Class && a.Floor == b.Floor && a.Completed == b.Completed
 }
-
-// TODO:
-// isMine() bool

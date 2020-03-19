@@ -1,64 +1,94 @@
 package orderprocessor
 
 import (
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"fmt"
 )
 
-// OrderProcessor processes an incoming order from this or other elevators
-func OrderProcessor(
+// OrderManager order from this or other elevators
+func OrderManager(
 	incomingOrdersChan chan order.Order,
-	singleReadRequests chan orderrepository.ReadRequest,
-	repoWriteRequests chan orderrepository.WriteRequest,
+	buttonPushes chan elevator.ButtonEvent,
 	toController chan order.Order,
-	toTransmitter chan order.Order,
+	toDelegate chan order.Order,
+	toRedelegate chan order.Order,
+	toTransmit chan order.Order,
 ) {
+	allOrders := orderrepository.MakeEmptyOrderRepository()
+
+
 	for {
 		select {
 		case incomingOrder := <-incomingOrdersChan:
+			handleIncomingOrder(incomingOrder, &allOrders, toController, toDelegate, toTransmit)
+		case buttonPush := <-buttonPushes:
+			handleButtonPush(buttonPush, &allOrders, toDelegate)
+		case 
+		}
+	}
+}
+
+func handleIncomingOrder(
+	incomingOrder order.Order,
+	allOrders *orderrepository.OrderRepository,
+	toController chan order.Order,
+	toDelegate chan order.Order,
+	toTransmit chan order.Order,
+) {
+	// TODO: Comment here
+	fmt.Printf("\nHandling incoming order!\n")
+	incomingOrder.Print()
+
+	if !incomingOrder.IsValid() {
+		return // Ignore the incoming order
+	}
+
+	localOrder, err := allOrders.ReadSingleOrder(incomingOrder.OrderID)
+	exists := err != nil
+
+	if exists {
+		switch {
+		case localOrder.Completed && !incomingOrder.Completed:
+			// Notify other nodes that order is actually completed.
+			// Don't update the OrderRepository, local state is newer.
 			go func() {
-				fmt.Printf("\nIncoming order in processor!\n")
-				incomingOrder.Print()
-
-				if !incomingOrder.IsValid() {
-					return // Ignore the incoming order
-				}
-
-				// Check OrderRepository for order with same ID:
-				readReq := orderrepository.MakeReadRequest(incomingOrder.OrderID)
-				singleReadRequests <- readReq
-
-				if localOrder := <-readReq.ResponseCh; localOrder.IsValid() {
-					// Order exists in OrderRepository.
-					switch {
-					case localOrder.Completed && !incomingOrder.Completed:
-						// Notify other nodes that order is actually completed.
-						// Don't update the OrderRepository, local state is newer.
-						toTransmitter <- localOrder
-					case !localOrder.Completed && incomingOrder.Completed:
-						// Overwrite existing order as completed. Update controller.
-						writeReq := orderrepository.MakeWriteRequest(incomingOrder)
-						repoWriteRequests <- writeReq
-						if !<-writeReq.SuccessCh {
-							fmt.Println("Error: Could not overwrite order to repo for some reason!")
-						}
-						toController <- incomingOrder
-					}
-				} else {
-					// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
-					writeReq := orderrepository.MakeWriteRequest(incomingOrder)
-					repoWriteRequests <- writeReq
-					fmt.Println("Trying to write new order to processor")
-					if <-writeReq.SuccessCh {
-						toController <- incomingOrder
-						toTransmitter <- incomingOrder
-					} else {
-						fmt.Println("Error: Could not write new order to repo for some reason!")
-						// TODO maybe add restart
-					}
-				}
+				toTransmit <- localOrder
+			}()
+		case !localOrder.Completed && incomingOrder.Completed:
+			// Overwrite existing order as completed. Update controller.
+			allOrders.WriteOrderToRepository(incomingOrder)
+			go func() {
+				toController <- incomingOrder
 			}()
 		}
+	} else {
+		// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
+		allOrders.WriteOrderToRepository(incomingOrder)
+		go func() {
+			toController <- incomingOrder
+			toTransmit <- incomingOrder
+		}()
+	}
+}
+
+// handleButtonPush creates an order and sends it to be delegated if no equivalent order already exists.
+func handleButtonPush(
+	pushedButton elevator.ButtonEvent,
+	repoptr *orderrepository.OrderRepository,
+	toDelegate chan order.Order,
+) {
+	if !pushedButton.IsValid() {
+		return
+	}
+
+	o := order.MakeUnassignedOrder(pushedButton)
+
+	if !repoptr.HasEquivalentOrders(o) {
+		go func() {
+			// No active orders are equivalent, have the new order delegated.
+			toDelegate <- o
+		}()
 	}
 }
