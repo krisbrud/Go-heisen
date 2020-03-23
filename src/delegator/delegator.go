@@ -17,7 +17,6 @@ func Delegator(
 	transmitState chan elevator.Elevator,
 	receiveState chan elevator.Elevator,
 ) {
-
 	redelegations := make(map[order.OrderIDType]bool)
 	elevatorStates := make(map[string]elevator.Elevator)
 
@@ -31,6 +30,7 @@ func Delegator(
 			// Find best recipent for order based on current belief state
 			recipent, err := bestRecipent(orderToDelegate, elevatorStates, "")
 			orderToDelegate.RecipentID = recipent
+
 			// Doing order myself, but warn user? TODO fix this
 			if err != nil {
 				fmt.Printf("%v\n", err)
@@ -84,6 +84,9 @@ func Delegator(
 			// TODO: Possibly add timestamp for elev, only accept states that are
 			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
 			elevatorStates[elev.ElevatorID] = elev
+
+			// DEBUG: Print all elevator states:
+			fmt.Println("All elevator states after delegator update", elevatorStates)
 		}
 	}
 }
@@ -107,7 +110,7 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 	fmt.Println("")
 
 	if bestElevatorID == "" {
-		err := fmt.Errorf("Did not any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
+		err := fmt.Errorf("Did not find any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
 		return elevator.GetMyElevatorID(), err
 	}
 

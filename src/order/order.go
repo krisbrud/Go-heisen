@@ -108,5 +108,11 @@ func (o Order) IsFromCab() bool {
 
 // AreEquivalent returns true if orders have the same class, floor and completion status
 func AreEquivalent(a, b Order) bool {
-	return a.Class == b.Class && a.Floor == b.Floor && a.Completed == b.Completed
+	switch a.Class {
+	case elevator.BT_Cab:
+		// Cab calls from different elevators are not equivalent.
+		return a.Class == b.Class && a.Floor == b.Floor && a.Completed == b.Completed && a.RecipentID == b.RecipentID
+	default:
+		return a.Class == b.Class && a.Floor == b.Floor && a.Completed == b.Completed
+	}
 }

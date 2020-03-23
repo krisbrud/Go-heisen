@@ -117,29 +117,3 @@ func resendAllActiveOrders(
 		toTransmit <- activeOrder
 	}
 }
-
-// handleButtonPush creates an order and sends it to be delegated if no equivalent order already exists.
-func handleButtonPush(
-	pushedButton elevator.ButtonEvent,
-	repoptr *orderrepository.OrderRepository,
-	incomingOrdersChan chan order.Order,
-	toDelegate chan order.Order,
-) {
-	fmt.Println("handleButtonPush")
-	if !pushedButton.IsValid() {
-		return
-	}
-
-	o := order.MakeUnassignedOrder(pushedButton)
-
-	if !repoptr.HasEquivalentOrders(o) {
-		if o.Class == elevator.BT_Cab {
-			// My cab call, assign to me
-			o.RecipentID = elevator.GetMyElevatorID()
-			go func() { incomingOrdersChan <- o }()
-		} else {
-			// No active orders are equivalent, have the new order delegated.
-			go func() { toDelegate <- o }()
-		}
-	}
-}

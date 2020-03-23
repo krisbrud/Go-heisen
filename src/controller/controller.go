@@ -14,6 +14,39 @@ const (
 	orderCapacity = 100
 )
 
+/*
+ButtonUpdate:
+	if at floor of button and not moving
+		open/reopendoor
+	else
+		send command
+
+FloorUpdate:
+	set new floor in state
+
+	stop if needed
+		set in state
+		set motor direction
+
+		send floor arrival to handler
+
+	send new state to other nodes
+
+CloseDoor:
+	find next direction for elevator
+		set and execute
+
+ActiveOrdersUpdate:
+hensyn: dør, retning, lys
+	if should stop at current floor
+		open/re-open door
+
+	if door not open
+		find and set next direction
+
+	set lights
+*/
+
 func Controller(
 	activeOrdersUpdates chan order.OrderList,
 	buttonPushes chan elevator.ButtonEvent,
@@ -58,15 +91,7 @@ func Controller(
 	for {
 		select {
 		case buttonEvent := <-buttonUpdates:
-			/*
-				if at floor of button and not moving
-					open/reopendoor
-				else
-					send command
-					reset timer
 
-				set direction otherwise? - should be removed
-			*/
 			// Print state?
 			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
 			elev.Print()
@@ -76,52 +101,18 @@ func Controller(
 			}
 
 			switch elev.Behaviour { // Cases are mutually exclusive
-			case elevator.EB_DoorOpen:
+			case elevator.EB_DoorOpen, elevator.EB_Idle:
 				if elev.Floor == buttonEvent.Floor {
-					doorTimer.Reset(doorDuration)
-				} else {
-					buttonPushes <- buttonEvent
-				}
-
-			case elevator.EB_Moving:
-				buttonPushes <- buttonEvent
-
-			case elevator.EB_Idle:
-				if elev.Floor == buttonEvent.Floor {
+					// Open/re-open the door
 					elevio.SetDoorOpenLamp(true)
 					doorTimer.Reset(doorDuration)
-					elev.Behaviour = elevator.EB_DoorOpen // TODO refactor
-				} else {
-					buttonPushes <- buttonEvent
-					nextDir := chooseDirection(elev, activeOrders)
-					elev.IntendedDir = nextDir
-					elevio.SetMotorDirection(elev.IntendedDir)
-					elev.Behaviour = elevator.EB_Moving
+					elev.Behaviour = elevator.EB_DoorOpen
+					continue // Don't send button push to handler
 				}
 			}
-			if elev.IsValid() {
-				stateUpdates <- elev
-			} else {
-				fmt.Println("Elevator not valid!")
-				elev.Print()
-			}
-			// printf("\nNew state:\n");
-			// elevator_print(elev);
+			buttonPushes <- buttonEvent
 
 		case newFloor := <-floorUpdates:
-			/*
-				set new floor in state
-
-				stop if needed
-					set in state
-					set motor direction
-
-					send floor arrival to handler
-
-				send new state to other nodes
-
-
-			*/
 			fmt.Printf("Floor update: %#v\n", newFloor)
 			elev.Print()
 
@@ -129,35 +120,27 @@ func Controller(
 			elevio.SetFloorIndicator(elev.Floor)
 
 			if shouldStop(elev, activeOrders) { // && elev.Behaviour == elevator.EB_Moving
-				fmt.Println("Floor reached, elevator should stop.")
 				// Stop the elevator
+				fmt.Println("Floor reached, elevator should stop.")
 				elevio.SetMotorDirection(elevator.MD_Stop)
-
-				// Clear the orders we have fulfilled
-				go func() { toArrivedFloorHandler <- elev }()
+				// Don't change the IntendedDir, prefer to continue doing orders in same direction
 
 				// Open the door
 				elevio.SetDoorOpenLamp(true)
 				doorTimer.Reset(doorDuration)
 				elev.Behaviour = elevator.EB_DoorOpen
 
+				// Make orderprocessor the orders we have fulfilled TODO: OrderManager or processor
+				go func() { toArrivedFloorHandler <- elev }()
 			}
-			if elev.IsValid() {
-				stateUpdates <- elev
-			}
+
+			stateUpdates <- elev
 
 			fmt.Println("After floor update")
 			elev.Print()
 
 		case <-doorTimer.C:
-			/*
-				find next direction for elevator
-					set and execute
-
-			*/
-
 			// Door timer timed out, close door.
-			fmt.Println("Door timer!")
 			elevio.SetDoorOpenLamp(false)
 
 			// Find and set motor direction
@@ -173,35 +156,38 @@ func Controller(
 
 			stateUpdates <- elev
 
-			elev.Print()
-
-			// Possibly print new state
-
 		case activeOrders = <-activeOrdersUpdates:
 			/*
-				if door open
-					do nothing
-				else
-					find and set next direction
 
-				set lights
-			*/
+			 */
 			fmt.Println("Update of all orders received!")
 			elev.Print()
 			activeOrders.Print()
 
-			nextDir := chooseDirection(elev, activeOrders)
-			fmt.Printf("\nNext intended direction: %v\n", nextDir)
-			elev.IntendedDir = nextDir
+			elev.IntendedDir = chooseDirection(elev, activeOrders)
 
-			// // Send current state to floor updates
-			// if elev.Behaviour == elevator.EB_Idle {
-			// 	go func() { floorUpdates <- elev.Floor }()
-			// }
-			// Choose direction and execute if idle
-			if elev.Behaviour != elevator.EB_DoorOpen {
+			if shouldStop(elev, activeOrders) {
+				switch elev.Behaviour {
+				case elevator.EB_Idle, elevator.EB_DoorOpen:
+					// Open/re-open the door
+					elevio.SetDoorOpenLamp(true)
+					doorTimer.Reset(doorDuration)
+					elev.Behaviour = elevator.EB_DoorOpen
+				}
+			}
+
+			// Choose direction and execute if elevator is idle
+			if elev.Behaviour == elevator.EB_Idle {
 				elevio.SetMotorDirection(elev.IntendedDir)
-				elev.Behaviour = elevator.EB_Moving
+
+				if elev.IntendedDir != elevator.MD_Stop {
+					elev.Behaviour = elevator.EB_Moving
+				}
+			}
+
+			if elev.Behaviour == elevator.EB_Idle {
+				// Notify ArrivedFloorHandler we are idle at the current floor, so it may clear orders at the current floor
+				go func() { toArrivedFloorHandler <- elev }()
 			}
 
 			setAllLights(activeOrders)

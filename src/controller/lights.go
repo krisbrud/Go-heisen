@@ -7,13 +7,7 @@ import (
 )
 
 func setAllLights(activeOrders order.OrderList) {
-	// fmt.Println("In setAllLights")
-	// activeOrders.Print()
 	// Make local representation to avoid briefly turning lights off before turning them on again
-	if elevator.GetBottomFloor() != 0 {
-		panic("routine setAllLights assumes the bottom floor is zero!")
-	}
-
 	numFloors := elevator.GetNumFloors()
 	buttonsPerFloor := 3
 
