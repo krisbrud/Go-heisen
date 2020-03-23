@@ -42,11 +42,24 @@ type Elevator struct {
 	IntendedDir MotorDirection
 	Behaviour   ElevatorBehaviour
 	ElevatorID  string
-	// ActiveOrders []order.Order
+}
+
+func (eb ElevatorBehaviour) String() string {
+	switch eb {
+	case EB_Idle:
+		return "Idle"
+	case EB_DoorOpen:
+		return "DoorOpen"
+	case EB_Moving:
+		return "Moving"
+	default:
+		return "invalid"
+	}
+
 }
 
 func (elev Elevator) String() string {
-	return fmt.Sprintf("Elevator:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n", elev.Floor, elev.IntendedDir, elev.Behaviour, elev.ElevatorID)
+	return fmt.Sprintf("Elevator:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n", elev.Floor, elev.IntendedDir, elev.Behaviour.String(), elev.ElevatorID)
 }
 
 func (elev Elevator) Print() {

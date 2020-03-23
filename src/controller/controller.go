@@ -15,7 +15,7 @@ const (
 )
 
 func Controller(
-	incomingOrders chan order.Order,
+	activeOrdersUpdates chan order.OrderList,
 	buttonPushes chan elevator.ButtonEvent,
 	stateUpdates chan elevator.Elevator,
 	toArrivedFloorHandler chan elevator.Elevator,
@@ -58,7 +58,6 @@ func Controller(
 			// Print state?
 			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
 			elev.Print()
-			activeOrders.Print()
 
 			if !elev.IsValid() {
 				continue
@@ -80,7 +79,7 @@ func Controller(
 				if elev.Floor == buttonEvent.Floor {
 					elevio.SetDoorOpenLamp(true)
 					doorTimer.Reset(doorDuration)
-					// elev.Behaviour = EB_DoorOpen; // TODO refactor
+					elev.Behaviour = elevator.EB_DoorOpen // TODO refactor
 				} else {
 					buttonPushes <- buttonEvent
 					nextDir := chooseDirection(elev, activeOrders)
@@ -92,21 +91,18 @@ func Controller(
 			if elev.IsValid() {
 				stateUpdates <- elev
 			}
-
-			setAllLights(activeOrders) // Set on incomingorder and completed order instead
-
 			// printf("\nNew state:\n");
 			// elevator_print(elev);
 
 		case newFloor := <-floorUpdates:
 			fmt.Printf("Floor update: %#v\n", newFloor)
 			elev.Print()
-			activeOrders.Print()
 
 			elev.Floor = newFloor
 			elevio.SetFloorIndicator(elev.Floor)
 
 			if elev.Behaviour == elevator.EB_Moving && shouldStop(elev, activeOrders) {
+				fmt.Println("New floor reached, elevator should stop.")
 				// Stop the elevator
 				elevio.SetMotorDirection(elevator.MD_Stop)
 
@@ -123,13 +119,12 @@ func Controller(
 				stateUpdates <- elev
 			}
 
-			setAllLights(activeOrders)
 			fmt.Println("After floor update")
 			elev.Print()
-			activeOrders.Print()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
+			fmt.Println("Door timer!")
 			elevio.SetDoorOpenLamp(false)
 
 			// Find and set motor direction
@@ -143,39 +138,34 @@ func Controller(
 				elev.Behaviour = elevator.EB_Moving
 			}
 
+			elev.Print()
+
 			// Possibly print new state
 
-		case newOrder := <-incomingOrders:
-			fmt.Printf("\nNew order in controller: %v\nElevator: %v", newOrder.String(), elev.String())
-			if !newOrder.IsValid() {
-				fmt.Println("Controller received invalid order", newOrder)
-			}
+		case tempActiveOrders := <-activeOrdersUpdates:
+			activeOrders = tempActiveOrders
+			fmt.Println("Update of all orders received!")
+			elev.Print()
+			activeOrders.Print()
 
-			if !newOrder.Completed {
-				activeOrders = append(activeOrders, newOrder)
+			nextDir := chooseDirection(elev, activeOrders)
+			fmt.Printf("\nNext intended direction: %v\n", nextDir)
+			elev.IntendedDir = nextDir
 
-				// Choose direction and execute
-				nextDir := chooseDirection(elev, activeOrders)
-				fmt.Printf("Next intended direction: %v\n", nextDir)
-				elev.IntendedDir = nextDir
+			// Choose direction and execute if idle
+			if elev.Behaviour != elevator.EB_DoorOpen {
 				elevio.SetMotorDirection(elev.IntendedDir)
 				elev.Behaviour = elevator.EB_Moving
-			} else {
-				// Remove from queue
-				fmt.Println("Removing order from queue!")
-				newOrder.Print()
-				activeOrders = removeEquivalentOrders(activeOrders, newOrder)
 			}
 
-			fmt.Printf("\nNew order in controller handled: %s\nElevator: %s", newOrder, elev)
-			activeOrders.Print()
 			setAllLights(activeOrders)
-
 		}
 	}
 }
 
 func setAllLights(activeOrders order.OrderList) {
+	fmt.Println("In setAllLights")
+	activeOrders.Print()
 	// Make local representation to avoid briefly turning lights off before turning them on again
 	if elevator.GetBottomFloor() != 0 {
 		panic("routine setAllLights assumes the bottom floor is zero!")
@@ -211,20 +201,11 @@ func setAllLights(activeOrders order.OrderList) {
 	}
 }
 
-func removeEquivalentOrders(activeOrders order.OrderList, completedOrder order.Order) order.OrderList {
-	fmt.Println("Remove equivalent orders")
-	newActiveOrders := make(order.OrderList, 0, orderCapacity)
+func shouldStop(elev elevator.Elevator, activeOrders order.OrderList) bool {
+	fmt.Printf("In shouldStop")
+	elev.Print()
+	activeOrders.Print()
 
-	for _, existingOrder := range activeOrders {
-		if !order.AreEquivalent(existingOrder, completedOrder) {
-			newActiveOrders = append(newActiveOrders, existingOrder)
-		}
-	}
-
-	return newActiveOrders
-}
-
-func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 	switch elev.IntendedDir {
 	case elevator.MD_Down:
 		shouldStopAtOrder := func(o order.Order) bool {

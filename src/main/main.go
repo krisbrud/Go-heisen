@@ -47,9 +47,8 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	// ButtonPushHandler
 	buttonPushes := make(chan elevator.ButtonEvent)
 	// Controller
-	toController := make(chan order.Order)
+	activeOrders := make(chan order.OrderList)
 	// Delegator
-	localStateUpdates := make(chan elevator.Elevator)
 	toDelegate := make(chan order.Order)
 	toRedelegate := make(chan order.Order)
 	// OrderProcessor
@@ -68,9 +67,9 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go controller.Controller(toController, buttonPushes, localStateUpdates, floorArrivals, elevatorPort)
-	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, localStateUpdates, transmitState, receiveState)
-	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, toController, toDelegate, transmitOrder)
+	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals, elevatorPort)
+	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
+	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, transmitOrder)
 	// go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
 
 	// Block such that goroutine does not exit

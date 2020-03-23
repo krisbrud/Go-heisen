@@ -12,7 +12,7 @@ func OrderProcessor(
 	incomingOrdersChan chan order.Order,
 	buttonPushes chan elevator.ButtonEvent,
 	floorArrivals chan elevator.Elevator,
-	toController chan order.Order,
+	toController chan order.OrderList,
 	toDelegate chan order.Order,
 	toTransmit chan order.Order,
 ) {
@@ -25,7 +25,7 @@ func OrderProcessor(
 		case buttonPush := <-buttonPushes:
 			handleButtonPush(buttonPush, &allOrders, incomingOrdersChan, toDelegate)
 		case elevAtFloor := <-floorArrivals:
-			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan)
+			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan, toTransmit)
 		}
 	}
 }
@@ -33,7 +33,7 @@ func OrderProcessor(
 func handleIncomingOrder(
 	incomingOrder order.Order,
 	allOrders *orderrepository.OrderRepository,
-	toController chan order.Order,
+	toController chan order.OrderList,
 	toDelegate chan order.Order,
 	toTransmit chan order.Order,
 ) {
@@ -55,32 +55,32 @@ func handleIncomingOrder(
 			// Notify other nodes that order is actually completed.
 			// Don't update the OrderRepository, local state is newer.
 			go func() { toTransmit <- localOrder }()
+			return // Don't resend all active orders to controller
+
 		case !localOrder.Completed && incomingOrder.Completed:
 			// Overwrite existing order as completed. Update controller.
 			allOrders.WriteOrderToRepository(incomingOrder)
 			fmt.Println("Order being marked as completed in processor.")
-
-			go func() {
-				toController <- incomingOrder
-			}()
 		}
 	} else {
 		// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
 		fmt.Println("New order incoming in processor")
-		incomingOrder.Print()
 
 		allOrders.WriteOrderToRepository(incomingOrder)
 		go func() {
-			toController <- incomingOrder
 			toTransmit <- incomingOrder
 		}()
 	}
+	// Update the controller about the current active orders
+	activeOrders := allOrders.ReadActiveOrders()
+	go func() { toController <- activeOrders }()
 }
 
 func clearOrdersOnFloorArrival(
 	elev elevator.Elevator,
 	repoptr *orderrepository.OrderRepository,
 	handleOrder chan order.Order,
+	transmitOrder chan order.Order,
 ) {
 	fmt.Printf("ArrivedFloorHandler! State: %#v", elev)
 
@@ -99,7 +99,10 @@ func clearOrdersOnFloorArrival(
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
-				go func() { handleOrder <- activeOrder }() // New goroutine to avoid deadlock
+				go func() {
+					transmitOrder <- activeOrder
+					handleOrder <- activeOrder
+				}() // New goroutine to avoid deadlock
 			}
 		}
 	}

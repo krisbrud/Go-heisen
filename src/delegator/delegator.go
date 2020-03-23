@@ -14,7 +14,6 @@ func Delegator(
 	toRedelegate chan order.Order,
 	toOrderTransmitter chan order.Order,
 	toProcessor chan order.Order,
-	localStateUpdates chan elevator.Elevator,
 	transmitState chan elevator.Elevator,
 	receiveState chan elevator.Elevator,
 ) {
@@ -62,22 +61,6 @@ func Delegator(
 			toProcessor <- orderToRedelegate
 			toOrderTransmitter <- orderToRedelegate
 
-		case elev := <-localStateUpdates:
-			fmt.Printf("\nIncoming elevator state in Delegator: %#v\n")
-			elev.Print()
-			if !elev.IsValid() {
-				fmt.Printf("Invalid elev incoming! elev: %#v", elev.String())
-				break
-			}
-			// TODO: Possibly add timestamp for elev, only accept states that are
-			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
-			elevatorStates[elev.ElevatorID] = elev
-
-			// Notify other elevators about state
-			go func() {
-				transmitState <- elev
-			}()
-
 		case elev := <-receiveState:
 			fmt.Println("Received state from other elevator!")
 			elev.Print()
@@ -85,6 +68,16 @@ func Delegator(
 				fmt.Printf("Invalid elev incoming!")
 				elev.Print()
 				break
+			}
+
+			// Notify other elevators about own state
+			if elev.ElevatorID == elevator.GetMyElevatorID() {
+				oldElev, present := elevatorStates[elev.ElevatorID]
+				if present && oldElev == elev {
+
+				} else {
+
+				}
 			}
 			// TODO: Possibly add timestamp for elev, only accept states that are
 			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
