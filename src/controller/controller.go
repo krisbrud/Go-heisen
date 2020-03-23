@@ -29,14 +29,6 @@ func Controller(
 	go elevio.PollButtons(buttonUpdates)
 	go elevio.PollFloorSensor(floorUpdates)
 
-	/* void fsm_onInitBetweenFloors(void){
-		outputDevice.motorDirection(elevator.MD_Down);
-		elev.IntendedDir = elevator.MD_Down;
-		elev.Behaviour = EB_Moving;
-	} */
-
-	// elev := initialize elev between floors
-
 	// Initialize internal elevator state
 	elev := elevator.UninitializedElevatorBetweenFloors()
 
@@ -101,35 +93,40 @@ func Controller(
 				stateUpdates <- elev
 			}
 
-			// setAllLights(elev); // Set on incomingorder and completed order instead
+			setAllLights(activeOrders) // Set on incomingorder and completed order instead
 
 			// printf("\nNew state:\n");
 			// elevator_print(elev);
 
 		case newFloor := <-floorUpdates:
-			// TODO maybe print something
 			fmt.Printf("Floor update: %#v\n", newFloor)
+			elev.Print()
+			activeOrders.Print()
 
 			elev.Floor = newFloor
 			elevio.SetFloorIndicator(elev.Floor)
 
 			if elev.Behaviour == elevator.EB_Moving && shouldStop(elev, activeOrders) {
-				// Clear the orders we have fulfilled
-				toArrivedFloorHandler <- elev
-
 				// Stop the elevator
 				elevio.SetMotorDirection(elevator.MD_Stop)
+
+				// Clear the orders we have fulfilled
+				go func() { toArrivedFloorHandler <- elev }()
 
 				// Open the door
 				elevio.SetDoorOpenLamp(true)
 				doorTimer.Reset(doorDuration)
 				elev.Behaviour = elevator.EB_DoorOpen
 
-				// setAllLights(elev);
 			}
 			if elev.IsValid() {
 				stateUpdates <- elev
 			}
+
+			setAllLights(activeOrders)
+			fmt.Println("After floor update")
+			elev.Print()
+			activeOrders.Print()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
@@ -154,32 +151,68 @@ func Controller(
 				fmt.Println("Controller received invalid order", newOrder)
 			}
 
-			if newOrder.IsMine() {
-				if !newOrder.Completed {
-					activeOrders = append(activeOrders, newOrder)
+			if !newOrder.Completed {
+				activeOrders = append(activeOrders, newOrder)
 
-					// Choose direction and execute
-					nextDir := chooseDirection(elev, activeOrders)
-					elev.IntendedDir = nextDir
-					elevio.SetMotorDirection(elev.IntendedDir)
-					elev.Behaviour = elevator.EB_Moving
-				} else {
-					// Remove from queue
-					fmt.Println("Removing order from queue!")
-					newOrder.Print()
-					activeOrders = removeEquivalentOrders(activeOrders, newOrder)
-				}
+				// Choose direction and execute
+				nextDir := chooseDirection(elev, activeOrders)
+				fmt.Printf("Next intended direction: %v\n", nextDir)
+				elev.IntendedDir = nextDir
+				elevio.SetMotorDirection(elev.IntendedDir)
+				elev.Behaviour = elevator.EB_Moving
+			} else {
+				// Remove from queue
+				fmt.Println("Removing order from queue!")
+				newOrder.Print()
+				activeOrders = removeEquivalentOrders(activeOrders, newOrder)
 			}
 
-			// Set lights for order
-			elevio.SetButtonLamp(elevator.ButtonType(newOrder.Class), newOrder.Floor, newOrder.Completed)
 			fmt.Printf("\nNew order in controller handled: %s\nElevator: %s", newOrder, elev)
+			activeOrders.Print()
+			setAllLights(activeOrders)
 
 		}
 	}
 }
 
+func setAllLights(activeOrders order.OrderList) {
+	// Make local representation to avoid briefly turning lights off before turning them on again
+	if elevator.GetBottomFloor() != 0 {
+		panic("routine setAllLights assumes the bottom floor is zero!")
+	}
+
+	numFloors := elevator.GetNumFloors()
+	buttonsPerFloor := 3
+
+	// indexed as lights[floor][ButtonType]
+	lights := make([][]bool, numFloors, numFloors)
+	for i := range lights {
+		lights[i] = make([]bool, buttonsPerFloor, buttonsPerFloor)
+	}
+
+	for _, o := range activeOrders {
+		if !o.Completed && !(o.IsFromCab() && !o.IsMine()) {
+			// Found order that is not completed yet, and is not some other
+			// elevators cab call. Set the light
+			lights[o.Floor][int(o.Class)] = true
+		}
+	}
+
+	// Iterate through all lights, set
+	for floor := range lights {
+		for buttonIdx := range lights[floor] {
+			button := elevator.ButtonType(buttonIdx)
+			if !order.ValidButtonTypeGivenFloor(button, floor) {
+				continue
+			}
+			lightShouldBeOn := lights[floor][buttonIdx]
+			elevio.SetButtonLamp(button, floor, lightShouldBeOn)
+		}
+	}
+}
+
 func removeEquivalentOrders(activeOrders order.OrderList, completedOrder order.Order) order.OrderList {
+	fmt.Println("Remove equivalent orders")
 	newActiveOrders := make(order.OrderList, 0, orderCapacity)
 
 	for _, existingOrder := range activeOrders {
@@ -196,7 +229,7 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 	case elevator.MD_Down:
 		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
-			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_UP
+			notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallUp
 
 			return atSameFloor && notOppositeDirection && o.IsMine()
 		}
@@ -205,7 +238,7 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 	case elevator.MD_Up:
 		shouldStopAtOrder := func(o order.Order) bool {
 			atSameFloor := elev.Floor == o.Floor
-			notOppositeDirection := o.IsFromCab() || o.Class == order.HALL_DOWN
+			notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallDown
 
 			return atSameFloor && notOppositeDirection && o.IsMine()
 		}
@@ -216,13 +249,12 @@ func shouldStop(elev elevator.Elevator, activeOrders []order.Order) bool {
 }
 
 func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) bool {
-	satisfied := false
-
 	for _, o := range orderList {
-		satisfied = satisfied || predicateFunc(o)
+		if predicateFunc(o) {
+			return true
+		}
 	}
-
-	return satisfied
+	return false
 }
 
 func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {

@@ -8,6 +8,8 @@ import (
 )
 
 func TestCost(t *testing.T) {
+	elevator.SetMyElevatorID("SomeElevator")
+
 	// Cost from floor 1 to 3 while going up should be 2
 	o := getMockThirdFloorCabCall()
 	es := getMockElevatorStateFirstFloorUp()
@@ -37,8 +39,8 @@ func getMockFloorZeroCabUpOrder() order.Order {
 	return order.Order{
 		OrderID:    12345,
 		Floor:      0,
-		Class:      order.HALL_UP,
-		RecipentID: "SomeElevator",
+		Class:      elevator.BT_HallUp,
+		RecipentID: "",
 		Completed:  false,
 	}
 }
@@ -56,7 +58,7 @@ func getMockThirdFloorCabCall() order.Order {
 	return order.Order{
 		OrderID:    234678,
 		Floor:      3,
-		Class:      order.CAB,
+		Class:      elevator.BT_Cab,
 		RecipentID: "SomeElevator",
 		Completed:  false,
 	}

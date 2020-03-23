@@ -19,7 +19,7 @@ func Delegator(
 	receiveState chan elevator.Elevator,
 ) {
 
-	redelegations := make(map[int]bool)
+	redelegations := make(map[order.OrderIDType]bool)
 	elevatorStates := make(map[string]elevator.Elevator)
 
 	// TODO stateupdates

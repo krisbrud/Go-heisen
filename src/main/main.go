@@ -7,14 +7,11 @@ import (
 	"strconv"
 
 	"Go-heisen/src/Network-go/network/bcast"
-	"Go-heisen/src/arrivedfloorhandler"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
-	"Go-heisen/src/orderrepository"
-	"Go-heisen/src/watchdog"
 )
 
 func main() {
@@ -71,13 +68,10 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go arrivedfloorhandler.ArrivedFloorHandler(floorArrivals, readSingleRequests, toOrderProcessor)
-	go buttonpushhandler.ButtonPushHandler(buttonPushes, readAllRequests, toDelegate)
 	go controller.Controller(toController, buttonPushes, localStateUpdates, floorArrivals, elevatorPort)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, localStateUpdates, transmitState, receiveState)
-	go orderrepository.OrderRepository(readSingleRequests, readAllRequests, writeRequests)
-	go orderprocessor.OrderProcessor(toOrderProcessor, readSingleRequests, writeRequests, toController, transmitOrder)
-	go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
+	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, toController, toDelegate, transmitOrder)
+	// go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
 
 	// Block such that goroutine does not exit
 	<-restartSystem

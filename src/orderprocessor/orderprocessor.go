@@ -7,13 +7,13 @@ import (
 	"fmt"
 )
 
-// OrderManager order from this or other elevators
-func OrderManager(
+// OrderProcessor order from this or other elevators
+func OrderProcessor(
 	incomingOrdersChan chan order.Order,
 	buttonPushes chan elevator.ButtonEvent,
+	floorArrivals chan elevator.Elevator,
 	toController chan order.Order,
 	toDelegate chan order.Order,
-	toRedelegate chan order.Order,
 	toTransmit chan order.Order,
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
@@ -23,8 +23,9 @@ func OrderManager(
 		case incomingOrder := <-incomingOrdersChan:
 			handleIncomingOrder(incomingOrder, &allOrders, toController, toDelegate, toTransmit)
 		case buttonPush := <-buttonPushes:
-			handleButtonPush(buttonPush, &allOrders, toDelegate)
-			// case
+			handleButtonPush(buttonPush, &allOrders, incomingOrdersChan, toDelegate)
+		case elevAtFloor := <-floorArrivals:
+			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan)
 		}
 	}
 }
@@ -36,11 +37,11 @@ func handleIncomingOrder(
 	toDelegate chan order.Order,
 	toTransmit chan order.Order,
 ) {
-	// TODO: Comment here
-	fmt.Printf("\nHandling incoming order!\n")
+	fmt.Printf("\nProcessor handling incoming order!\n")
 	incomingOrder.Print()
 
 	if !incomingOrder.IsValid() {
+		fmt.Println("Incoming order not valid!")
 		return // Ignore the incoming order
 	}
 
@@ -48,22 +49,26 @@ func handleIncomingOrder(
 	exists := err != nil
 
 	if exists {
+		fmt.Println("Order already exists!")
 		switch {
 		case localOrder.Completed && !incomingOrder.Completed:
 			// Notify other nodes that order is actually completed.
 			// Don't update the OrderRepository, local state is newer.
-			go func() {
-				toTransmit <- localOrder
-			}()
+			go func() { toTransmit <- localOrder }()
 		case !localOrder.Completed && incomingOrder.Completed:
 			// Overwrite existing order as completed. Update controller.
 			allOrders.WriteOrderToRepository(incomingOrder)
+			fmt.Println("Order being marked as completed in processor.")
+
 			go func() {
 				toController <- incomingOrder
 			}()
 		}
 	} else {
 		// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
+		fmt.Println("New order incoming in processor")
+		incomingOrder.Print()
+
 		allOrders.WriteOrderToRepository(incomingOrder)
 		go func() {
 			toController <- incomingOrder
@@ -84,9 +89,9 @@ func clearOrdersOnFloorArrival(
 		// TODO restart
 	}
 
-	if elev.Behaviour == elevator.EB_Moving {
-		return // Elevator is moving, no orders to clear
-	}
+	// if elev.Behaviour == elevator.EB_Moving {
+	// 	return // Elevator is moving, no orders to clear
+	// }
 
 	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 	for _, activeOrder := range repoptr.ReadActiveOrders() {
@@ -94,9 +99,19 @@ func clearOrdersOnFloorArrival(
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
-				handleOrder <- activeOrder
+				go func() { handleOrder <- activeOrder }() // New goroutine to avoid deadlock
 			}
 		}
+	}
+}
+
+//
+func resendAllActiveOrders(
+	repoptr *orderrepository.OrderRepository,
+	toTransmit chan order.Order,
+) {
+	for _, activeOrder := range repoptr.ReadActiveOrders() {
+		toTransmit <- activeOrder
 	}
 }
 
@@ -104,8 +119,10 @@ func clearOrdersOnFloorArrival(
 func handleButtonPush(
 	pushedButton elevator.ButtonEvent,
 	repoptr *orderrepository.OrderRepository,
+	incomingOrdersChan chan order.Order,
 	toDelegate chan order.Order,
 ) {
+	fmt.Println("handleButtonPush")
 	if !pushedButton.IsValid() {
 		return
 	}
@@ -113,9 +130,13 @@ func handleButtonPush(
 	o := order.MakeUnassignedOrder(pushedButton)
 
 	if !repoptr.HasEquivalentOrders(o) {
-		go func() {
+		if o.Class == elevator.BT_Cab {
+			// My cab call, assign to me
+			o.RecipentID = elevator.GetMyElevatorID()
+			go func() { incomingOrdersChan <- o }()
+		} else {
 			// No active orders are equivalent, have the new order delegated.
-			toDelegate <- o
-		}()
+			go func() { toDelegate <- o }()
+		}
 	}
 }

@@ -8,13 +8,13 @@ import (
 
 const (
 	millisBetweenTicks = 200
-	secondsForTimeout  = 40
+	timeOutDuration    = 40 * time.Second
 )
 
 // Watchdog regularly distributes the active orders in the system, and gives expired order to Delegator to be redelegated
 func Watchdog(
-	readAllActiveRequests chan orderrepository.ReadRequest,
-	toDelegator chan order.Order,
+	repoptr *orderrepository.OrderRepository,
+	toRedelegate chan order.Order,
 	toTransmitter chan order.Order,
 ) {
 	// Initialize monotonic clock
@@ -23,7 +23,7 @@ func Watchdog(
 		return time.Since(initTime)
 	}
 
-	timestamps := make(map[int]time.Duration)
+	timestamps := make(map[order.OrderIDType]time.Duration)
 
 	ticker := time.NewTicker(millisBetweenTicks * time.Millisecond)
 
@@ -31,19 +31,8 @@ func Watchdog(
 		select {
 		case <-ticker.C: // New tick
 
-			readAllActiveReq := orderrepository.MakeReadAllActiveRequest()
-			readAllActiveRequests <- readAllActiveReq
-
-			for activeOrder := range readAllActiveReq.ResponseCh {
-				// fmt.Println("Watchdog tick!")
-				// fmt.Printf("Active order: %#v\nValidity %v", activeOrder, activeOrder.IsValid())
-
-				if !activeOrder.IsValid() {
-					break
-				}
-
-				// fmt.Println("Past break")
-
+			activeOrders := repoptr.ReadActiveOrders()
+			for _, activeOrder := range activeOrders {
 				// Check if order already has timestamp
 				id := activeOrder.OrderID
 				orderTimeStamp, alreadyRegistered := timestamps[id]
@@ -54,7 +43,7 @@ func Watchdog(
 					if isTimedOut(orderTimeStamp, now) {
 						go func() {
 							// Order has timed out, have delegator redelegate it
-							toDelegator <- activeOrder
+							toRedelegate <- activeOrder
 						}()
 					} else {
 						// Static redundancy, broadcast the active order to other nodes
@@ -71,11 +60,10 @@ func Watchdog(
 				}
 
 			}
-
 		}
 	}
 }
 
 func isTimedOut(timestamp time.Duration, now time.Duration) bool {
-	return now-timestamp > secondsForTimeout
+	return now-timestamp > timeOutDuration
 }

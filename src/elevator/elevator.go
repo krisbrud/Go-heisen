@@ -70,7 +70,7 @@ func (elev Elevator) IsValid() bool {
 
 func (be ButtonEvent) IsValid() bool {
 	return bottomFloor <= be.Floor && be.Floor <= topFloor &&
-		be.Button == BT_HallUp || be.Button == BT_HallDown || be.Button == BT_Cab
+		(be.Button == BT_HallUp || be.Button == BT_HallDown || be.Button == BT_Cab)
 }
 
 func (elev Elevator) IsIdle() bool { return elev.Behaviour == EB_Idle }

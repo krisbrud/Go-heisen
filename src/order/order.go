@@ -7,28 +7,17 @@ import (
 	"time"
 )
 
-type OrderClass int
 type OrderIDType int
 
-// TODO: elevio or this so there are no double definitions!
 const (
-	HALL_UP OrderClass = iota
-	HALL_DOWN
-	CAB
-	INVALID
-)
-
-const (
-	invalidOrderID  = -1
-	invalidFloor    = -1
-	invalidClass    = INVALID
-	invalidRecipent = ""
+	invalidOrderID  OrderIDType = -1
+	invalidRecipent             = ""
 )
 
 type Order struct {
 	OrderID    OrderIDType
 	Floor      int
-	Class      OrderClass // Defined by iota-"enum"
+	Class      elevator.ButtonType // Defined by iota-"enum"
 	RecipentID string
 	Completed  bool
 }
@@ -45,10 +34,11 @@ func (ol OrderList) Print() {
 	if len(ol) == 0 {
 		fmt.Println("Orders: []")
 	} else {
-		fmt.Println("Orders:")
+		fmt.Println("Orders: [")
 		for _, o := range ol {
 			o.Print()
 		}
+		fmt.Println("]")
 	}
 }
 
@@ -56,7 +46,7 @@ func NewInvalidOrder() Order {
 	return Order{
 		invalidOrderID,
 		-1,
-		INVALID,
+		elevator.ButtonType(-1),
 		"no recipent",
 		false,
 	}
@@ -66,7 +56,7 @@ func MakeUnassignedOrder(pushedButton elevator.ButtonEvent) Order {
 	return Order{
 		OrderID:    GetRandomID(),
 		Floor:      pushedButton.Floor,
-		Class:      OrderClass(pushedButton.Button), // TODO Verify that definitions are the same
+		Class:      pushedButton.Button, // TODO Verify that definitions are the same
 		RecipentID: "",
 		Completed:  false,
 	}
@@ -86,8 +76,22 @@ func GetRandomID() OrderIDType {
 
 func (o *Order) SetCompleted() { o.Completed = true }
 
+func ValidButtonTypeGivenFloor(bt elevator.ButtonType, floor int) bool {
+	switch bt {
+	case elevator.BT_Cab:
+		return elevator.GetBottomFloor() <= floor && floor <= elevator.GetTopFloor()
+	case elevator.BT_HallDown:
+		return elevator.GetBottomFloor()+1 <= floor && floor <= elevator.GetTopFloor()
+	case elevator.BT_HallUp:
+		return elevator.GetBottomFloor() <= floor && floor <= elevator.GetTopFloor()-1
+	default:
+		// Invalid ButtonType
+		return false
+	}
+}
+
 func (o Order) IsValid() bool {
-	return o.OrderID != invalidOrderID || o.Floor != invalidFloor || o.Class != invalidClass
+	return ValidButtonTypeGivenFloor(o.Class, o.Floor)
 }
 
 func (o Order) IsMine() bool {
@@ -95,11 +99,11 @@ func (o Order) IsMine() bool {
 }
 
 func (o Order) IsFromHall() bool {
-	return o.Class == HALL_UP || o.Class == HALL_DOWN
+	return o.Class == elevator.BT_HallUp || o.Class == elevator.BT_HallDown
 }
 
 func (o Order) IsFromCab() bool {
-	return o.Class == CAB
+	return o.Class == elevator.BT_Cab
 }
 
 // AreEquivalent returns true if orders have the same class, floor and completion status

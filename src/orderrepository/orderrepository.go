@@ -29,7 +29,7 @@ func (repoptr *OrderRepository) ReadSingleOrder(id order.OrderIDType) (order.Ord
 	o, found := repoptr.orders[id]
 
 	var err error = nil
-	if !found {
+	if found {
 		o = order.NewInvalidOrder()
 		err = fmt.Errorf("could not find order with id %v in OrderRepository", id)
 	} else if !o.IsValid() {
