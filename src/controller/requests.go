@@ -43,6 +43,13 @@ func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) b
 	return false
 }
 
+func ordersAtCurrentFloor(elev elevator.Elevator, activeOrders []order.Order) bool {
+	atCurrentFloor := func(o order.Order) bool {
+		return o.Floor == elev.Floor && o.IsMine()
+	}
+	return anyOrder(activeOrders, atCurrentFloor)
+}
+
 func ordersAbove(elev elevator.Elevator, activeOrders []order.Order) bool {
 	if len(activeOrders) == 0 {
 		return false

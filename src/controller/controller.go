@@ -100,16 +100,6 @@ func Controller(
 				continue
 			}
 
-			switch elev.Behaviour { // Cases are mutually exclusive
-			case elevator.EB_DoorOpen, elevator.EB_Idle:
-				if elev.Floor == buttonEvent.Floor {
-					// Open/re-open the door
-					elevio.SetDoorOpenLamp(true)
-					doorTimer.Reset(doorDuration)
-					elev.Behaviour = elevator.EB_DoorOpen
-					continue // Don't send button push to handler
-				}
-			}
 			buttonPushes <- buttonEvent
 
 		case newFloor := <-floorUpdates:
@@ -136,8 +126,8 @@ func Controller(
 
 			stateUpdates <- elev
 
-			fmt.Println("After floor update")
-			elev.Print()
+			// fmt.Println("After floor update")
+			// elev.Print()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
@@ -157,37 +147,31 @@ func Controller(
 			stateUpdates <- elev
 
 		case activeOrders = <-activeOrdersUpdates:
-			/*
-
-			 */
 			fmt.Println("Update of all orders received!")
 			elev.Print()
 			activeOrders.Print()
 
 			elev.IntendedDir = chooseDirection(elev, activeOrders)
-
-			if shouldStop(elev, activeOrders) {
+			if ordersAtCurrentFloor(elev, activeOrders) {
 				switch elev.Behaviour {
 				case elevator.EB_Idle, elevator.EB_DoorOpen:
 					// Open/re-open the door
 					elevio.SetDoorOpenLamp(true)
 					doorTimer.Reset(doorDuration)
 					elev.Behaviour = elevator.EB_DoorOpen
+
+					// Notify ArrivedFloorHandler that we handled the order at our floor (by opening door)
+					toArrivedFloorHandler <- elev
 				}
 			}
 
-			// Choose direction and execute if elevator is idle
+			// Execute direction if elevator is idle
 			if elev.Behaviour == elevator.EB_Idle {
 				elevio.SetMotorDirection(elev.IntendedDir)
 
 				if elev.IntendedDir != elevator.MD_Stop {
 					elev.Behaviour = elevator.EB_Moving
 				}
-			}
-
-			if elev.Behaviour == elevator.EB_Idle {
-				// Notify ArrivedFloorHandler we are idle at the current floor, so it may clear orders at the current floor
-				go func() { toArrivedFloorHandler <- elev }()
 			}
 
 			setAllLights(activeOrders)
