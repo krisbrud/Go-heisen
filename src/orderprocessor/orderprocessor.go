@@ -18,14 +18,13 @@ func OrderManager(
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
 
-
 	for {
 		select {
 		case incomingOrder := <-incomingOrdersChan:
 			handleIncomingOrder(incomingOrder, &allOrders, toController, toDelegate, toTransmit)
 		case buttonPush := <-buttonPushes:
 			handleButtonPush(buttonPush, &allOrders, toDelegate)
-		case 
+			// case
 		}
 	}
 }
@@ -70,6 +69,34 @@ func handleIncomingOrder(
 			toController <- incomingOrder
 			toTransmit <- incomingOrder
 		}()
+	}
+}
+
+func clearOrdersOnFloorArrival(
+	elev elevator.Elevator,
+	repoptr *orderrepository.OrderRepository,
+	handleOrder chan order.Order,
+) {
+	fmt.Printf("ArrivedFloorHandler! State: %#v", elev)
+
+	if !elev.IsValid() {
+		fmt.Println("New state not valid!")
+		// TODO restart
+	}
+
+	if elev.Behaviour == elevator.EB_Moving {
+		return // Elevator is moving, no orders to clear
+	}
+
+	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
+	for _, activeOrder := range repoptr.ReadActiveOrders() {
+		if activeOrder.Floor == elev.Floor {
+			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
+				// We have completed this order, make OrderProcessor register it and tell everyone.
+				activeOrder.SetCompleted()
+				handleOrder <- activeOrder
+			}
+		}
 	}
 }
 
