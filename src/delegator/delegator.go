@@ -73,10 +73,12 @@ func Delegator(
 			// Notify other elevators about own state
 			if elev.ElevatorID == elevator.GetMyElevatorID() {
 				oldElev, present := elevatorStates[elev.ElevatorID]
-				if present && oldElev == elev {
-
+				if present {
+					if elev != oldElev {
+						transmitState <- elev
+					}
 				} else {
-
+					transmitState <- elev
 				}
 			}
 			// TODO: Possibly add timestamp for elev, only accept states that are
@@ -92,6 +94,8 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 
 	fmt.Printf("Finding best recipent for order %#v\n", o)
 	fmt.Printf("Disallowed: %v\n", disallowed)
+	fmt.Printf("All states: %#v\n", states)
+
 	for elevatorID, state := range states {
 		cost := ordercost.Cost(o, state)
 		fmt.Printf("Cost for %v: %v", elevatorID, cost)

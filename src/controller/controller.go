@@ -37,7 +37,10 @@ func Controller(
 	case newFloor := <-floorUpdates:
 		// Send the floor update again on the channel so the normal handler may do it's routine
 		fmt.Println("Floor update received, sending state back!")
-		go func() { floorUpdates <- newFloor }()
+		go func() {
+			fmt.Println("Starting at floor!")
+			floorUpdates <- newFloor
+		}()
 	case <-time.After(200 * time.Millisecond):
 		// Elevator initialized between floors, go downwards.
 		fmt.Println("Started between floors!")
@@ -67,7 +70,6 @@ func Controller(
 			case elevator.EB_DoorOpen:
 				if elev.Floor == buttonEvent.Floor {
 					doorTimer.Reset(doorDuration)
-					// timer_start(elev.config.doorOpenDuration_s);
 				} else {
 					buttonPushes <- buttonEvent
 				}
@@ -90,6 +92,9 @@ func Controller(
 			}
 			if elev.IsValid() {
 				stateUpdates <- elev
+			} else {
+				fmt.Println("Elevator not valid!")
+				elev.Print()
 			}
 			// printf("\nNew state:\n");
 			// elevator_print(elev);
@@ -101,8 +106,8 @@ func Controller(
 			elev.Floor = newFloor
 			elevio.SetFloorIndicator(elev.Floor)
 
-			if elev.Behaviour == elevator.EB_Moving && shouldStop(elev, activeOrders) {
-				fmt.Println("New floor reached, elevator should stop.")
+			if shouldStop(elev, activeOrders) { // && elev.Behaviour == elevator.EB_Moving
+				fmt.Println("Floor reached, elevator should stop.")
 				// Stop the elevator
 				elevio.SetMotorDirection(elevator.MD_Stop)
 
@@ -142,8 +147,7 @@ func Controller(
 
 			// Possibly print new state
 
-		case tempActiveOrders := <-activeOrdersUpdates:
-			activeOrders = tempActiveOrders
+		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")
 			elev.Print()
 			activeOrders.Print()
@@ -158,14 +162,18 @@ func Controller(
 				elev.Behaviour = elevator.EB_Moving
 			}
 
+			if elev.Behaviour == elevator.EB_Idle {
+				go func() { floorUpdates <- elev.Floor }()
+			}
+
 			setAllLights(activeOrders)
 		}
 	}
 }
 
 func setAllLights(activeOrders order.OrderList) {
-	fmt.Println("In setAllLights")
-	activeOrders.Print()
+	// fmt.Println("In setAllLights")
+	// activeOrders.Print()
 	// Make local representation to avoid briefly turning lights off before turning them on again
 	if elevator.GetBottomFloor() != 0 {
 		panic("routine setAllLights assumes the bottom floor is zero!")
