@@ -10,28 +10,53 @@ func shouldStop(elev elevator.Elevator, activeOrders order.OrderList) bool {
 	fmt.Printf("In shouldStop")
 	elev.Print()
 	activeOrders.Print()
-
-	switch elev.IntendedDir {
-	case elevator.MD_Down:
-		shouldStopAtOrder := func(o order.Order) bool {
-			atSameFloor := elev.Floor == o.Floor
-			notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallUp
-
-			return atSameFloor && notOppositeDirection && o.IsMine()
-		}
-		return anyOrder(activeOrders, shouldStopAtOrder) || !ordersBelow(elev, activeOrders)
-
-	case elevator.MD_Up:
-		shouldStopAtOrder := func(o order.Order) bool {
-			atSameFloor := elev.Floor == o.Floor
-			notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallDown
-
-			return atSameFloor && notOppositeDirection && o.IsMine()
-		}
-		return anyOrder(activeOrders, shouldStopAtOrder) || !ordersAbove(elev, activeOrders)
+	if len(activeOrders) == 0 {
+		return true
 	}
 
-	return true // Default
+	for _, activeOrder := range activeOrders {
+		if activeOrder.Floor == elev.Floor && activeOrder.Class == 0 && elev.IntendedDir == 1 {
+			fmt.Printf("ShouldStop found a floor to stop atwhile going up\n")
+			return true
+
+		}
+		if activeOrder.Floor == elev.Floor && activeOrder.Class == 1 && elev.IntendedDir == -1 {
+			fmt.Printf("ShouldStop found a floor to stop at while going down\n")
+			return true
+
+		}
+		if (elev.IntendedDir == -1 && !ordersBelow(elev, activeOrders) && activeOrder.Floor == elev.Floor) || (elev.IntendedDir == 1 && !ordersAbove(elev, activeOrders)) {
+			fmt.Printf("ShouldStop foud no orders below this one and stopped\n")
+			return true
+		}
+		if activeOrder.Class == 2 {
+			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
+			return true
+		}
+
+	}
+	/*
+		switch elev.IntendedDir {
+		case elevator.MD_Down:
+			shouldStopAtOrder := func(o order.Order) bool {
+				atSameFloor := elev.Floor == o.Floor
+				notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallUp
+
+				return atSameFloor && notOppositeDirection && o.IsMine()
+			}
+			return anyOrder(activeOrders, shouldStopAtOrder) || !ordersBelow(elev, activeOrders)
+
+		case elevator.MD_Up:
+			shouldStopAtOrder := func(o order.Order) bool {
+				atSameFloor := elev.Floor == o.Floor
+				notOppositeDirection := o.IsFromCab() || o.Class == elevator.BT_HallDown
+
+				return atSameFloor && notOppositeDirection && o.IsMine()
+			}
+			return anyOrder(activeOrders, shouldStopAtOrder) || !ordersAbove(elev, activeOrders)
+		}
+	*/
+	return false // Default
 }
 
 func anyOrder(orderList []order.Order, predicateFunc func(o order.Order) bool) bool {

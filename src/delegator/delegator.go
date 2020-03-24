@@ -86,7 +86,7 @@ func Delegator(
 			elevatorStates[elev.ElevatorID] = elev
 
 			// DEBUG: Print all elevator states:
-			fmt.Println("All elevator states after delegator update", elevatorStates)
+			//fmt.Println("All elevator states after delegator update", elevatorStates)
 		}
 	}
 }

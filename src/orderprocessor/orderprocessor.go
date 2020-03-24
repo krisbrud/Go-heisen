@@ -25,7 +25,7 @@ func OrderProcessor(
 		select {
 		case elevAtFloor := <-floorArrivals:
 			// Clear relevant orders when arriving at floor, notify OrderProcessor and other nodes.
-			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan, toTransmit)
+			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, &allOrders, toController, toTransmit)
 		case incomingOrder := <-incomingOrdersChan:
 			// Update the OrderRepository of the incoming order
 			// Also notifies other nodes if receiving an order we know is completed
@@ -96,10 +96,11 @@ func handleIncomingOrder(
 func clearOrdersOnFloorArrival(
 	elev elevator.Elevator,
 	repoptr *orderrepository.OrderRepository,
-	handleOrder chan order.Order,
+	allOrders *orderrepository.OrderRepository,
+	toController chan order.OrderList,
 	transmitOrder chan order.Order,
 ) {
-	fmt.Printf("ArrivedFloorHandler! State: %#v", elev)
+	fmt.Printf("ArrivedFloorHandler! State: %#v\n", elev)
 
 	if !elev.IsValid() {
 		panic("Invalid state in floor arrival handler")
@@ -108,10 +109,14 @@ func clearOrdersOnFloorArrival(
 	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 	for _, activeOrder := range repoptr.ReadActiveOrders() {
 		if activeOrder.Floor == elev.Floor {
+			fmt.Printf("Active order with floor %#v being set to complete\n", activeOrder.Floor)
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
-				go func() { handleOrder <- activeOrder }() // New goroutine to avoid deadlock
+				allOrders.WriteOrderToRepository(activeOrder)
+				activeOrders := allOrders.ReadActiveOrders()
+				go func() { toController <- activeOrders }()
+				//go func() { handleOrder <- activeOrder }() // New goroutine to avoid deadlock
 				go func() { transmitOrder <- activeOrder }()
 			}
 		}

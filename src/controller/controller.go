@@ -104,14 +104,11 @@ func Controller(
 
 		case newFloor := <-floorUpdates:
 			fmt.Printf("Floor update: %#v\n", newFloor)
-			elev.Print()
-
 			elev.Floor = newFloor
+			elev.Print()
 			elevio.SetFloorIndicator(elev.Floor)
 
 			if shouldStop(elev, activeOrders) { // && elev.Behaviour == elevator.EB_Moving
-				// Stop the elevator
-				fmt.Println("Floor reached, elevator should stop.")
 				elevio.SetMotorDirection(elevator.MD_Stop)
 				// Don't change the IntendedDir, prefer to continue doing orders in same direction
 
@@ -148,7 +145,7 @@ func Controller(
 
 		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")
-			elev.Print()
+			//elev.Print()
 			activeOrders.Print()
 
 			elev.IntendedDir = chooseDirection(elev, activeOrders)
