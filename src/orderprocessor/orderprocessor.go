@@ -23,6 +23,9 @@ func OrderProcessor(
 
 	for {
 		select {
+		case elevAtFloor := <-floorArrivals:
+			// Clear relevant orders when arriving at floor, notify OrderProcessor and other nodes.
+			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan, toTransmit)
 		case incomingOrder := <-incomingOrdersChan:
 			// Update the OrderRepository of the incoming order
 			// Also notifies other nodes if receiving an order we know is completed
@@ -31,17 +34,13 @@ func OrderProcessor(
 		case buttonPush := <-buttonPushes:
 			// Create orders from button push to be delegated if needed.
 			handleButtonPush(buttonPush, &allOrders, incomingOrdersChan, toDelegate)
-		case elevAtFloor := <-floorArrivals:
-			// Clear relevant orders when arriving at floor, notify OrderProcessor and other nodes.
-			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan, toTransmit)
 		case <-watchdogTicker.C:
 			// Static redundancy, resend all active orders to other nodes
 			// This solves most issues from packet loss and disconnects/reconnects/restarts
-			resendAllActiveOrders(&allOrders, toTransmit)
+			//resendAllActiveOrders(&allOrders, toTransmit)
 
-			// Dynamic redundancy, redelegate orders that are not completed within deadline
-			activeOrders := allOrders.ReadActiveOrders()
-			toWatchdog <- activeOrders
+			// Dynamic redund/activeOrders := allOrders.ReadActiveOrders()
+			//toWatchdog <- activeOrders
 		}
 	}
 }
@@ -112,10 +111,8 @@ func clearOrdersOnFloorArrival(
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
-				go func() {
-					transmitOrder <- activeOrder
-					handleOrder <- activeOrder
-				}() // New goroutine to avoid deadlock
+				go func() { handleOrder <- activeOrder }() // New goroutine to avoid deadlock
+				go func() { transmitOrder <- activeOrder }()
 			}
 		}
 	}

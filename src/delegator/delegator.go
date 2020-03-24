@@ -24,8 +24,8 @@ func Delegator(
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
-			fmt.Println("Received order to delegate!")
-			orderToDelegate.Print()
+			// fmt.Println("Received order to delegate!")
+			// orderToDelegate.Print()
 
 			// Find best recipent for order based on current belief state
 			recipent, err := bestRecipent(orderToDelegate, elevatorStates, "")
@@ -62,8 +62,8 @@ func Delegator(
 			toOrderTransmitter <- orderToRedelegate
 
 		case elev := <-receiveState:
-			fmt.Println("Received state from other elevator!")
-			elev.Print()
+			// fmt.Println("Received state from other elevator!")
+			// elev.Print()
 			if !elev.IsValid() {
 				fmt.Printf("Invalid elev incoming!")
 				elev.Print()
@@ -95,9 +95,9 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 	bestElevatorID := ""
 	bestCost := 10000 // TODO: Refactor
 
-	fmt.Printf("Finding best recipent for order %#v\n", o)
-	fmt.Printf("Disallowed: %v\n", disallowed)
-	fmt.Printf("All states: %#v\n", states)
+	// fmt.Printf("Finding best recipent for order %#v\n", o)
+	// fmt.Printf("Disallowed: %v\n", disallowed)
+	// fmt.Printf("All states: %#v\n", states)
 
 	for elevatorID, state := range states {
 		cost := ordercost.Cost(o, state)

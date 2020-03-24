@@ -161,11 +161,11 @@ func Controller(
 					elev.Behaviour = elevator.EB_DoorOpen
 
 					// Notify ArrivedFloorHandler that we handled the order at our floor (by opening door)
-					toArrivedFloorHandler <- elev
+					go func() { toArrivedFloorHandler <- elev }()
 				}
 			}
 
-			// Execute direction if elevator is idle
+			// Execute movement in intended direction if elevator is idle
 			if elev.Behaviour == elevator.EB_Idle {
 				elevio.SetMotorDirection(elev.IntendedDir)
 
