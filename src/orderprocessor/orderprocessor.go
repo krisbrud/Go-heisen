@@ -5,6 +5,7 @@ import (
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"fmt"
+	"time"
 )
 
 // OrderProcessor order from this or other elevators
@@ -14,18 +15,33 @@ func OrderProcessor(
 	floorArrivals chan elevator.Elevator,
 	toController chan order.OrderList,
 	toDelegate chan order.Order,
+	toWatchdog chan order.OrderList,
 	toTransmit chan order.Order,
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
+	watchdogTicker := time.NewTicker(200 * time.Millisecond)
 
 	for {
 		select {
 		case incomingOrder := <-incomingOrdersChan:
+			// Update the OrderRepository of the incoming order
+			// Also notifies other nodes if receiving an order we know is completed
+			// Sends all active orders to the controller if the state has changed
 			handleIncomingOrder(incomingOrder, &allOrders, toController, toDelegate, toTransmit)
 		case buttonPush := <-buttonPushes:
+			// Create orders from button push to be delegated if needed.
 			handleButtonPush(buttonPush, &allOrders, incomingOrdersChan, toDelegate)
 		case elevAtFloor := <-floorArrivals:
+			// Clear relevant orders when arriving at floor, notify OrderProcessor and other nodes.
 			clearOrdersOnFloorArrival(elevAtFloor, &allOrders, incomingOrdersChan, toTransmit)
+		case <-watchdogTicker.C:
+			// Static redundancy, resend all active orders to other nodes
+			// This solves most issues from packet loss and disconnects/reconnects/restarts
+			resendAllActiveOrders(&allOrders, toTransmit)
+
+			// Dynamic redundancy, redelegate orders that are not completed within deadline
+			activeOrders := allOrders.ReadActiveOrders()
+			toWatchdog <- activeOrders
 		}
 	}
 }
@@ -61,6 +77,8 @@ func handleIncomingOrder(
 			// Overwrite existing order as completed. Update controller.
 			allOrders.WriteOrderToRepository(incomingOrder)
 			fmt.Println("Order being marked as completed in processor.")
+		default:
+			return // No changes, don't resend orders to controller
 		}
 	} else {
 		// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
@@ -85,13 +103,8 @@ func clearOrdersOnFloorArrival(
 	fmt.Printf("ArrivedFloorHandler! State: %#v", elev)
 
 	if !elev.IsValid() {
-		fmt.Println("New state not valid!")
-		// TODO restart
+		panic("Invalid state in floor arrival handler")
 	}
-
-	// if elev.Behaviour == elevator.EB_Moving {
-	// 	return // Elevator is moving, no orders to clear
-	// }
 
 	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 	for _, activeOrder := range repoptr.ReadActiveOrders() {

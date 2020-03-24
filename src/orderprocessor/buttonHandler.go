@@ -19,7 +19,7 @@ func handleButtonPush(
 		return
 	}
 
-	o := order.MakeUnassignedOrder(pushedButton)
+	o := makeUnassignedOrder(pushedButton)
 
 	if !repoptr.HasEquivalentOrders(o) {
 		if o.Class == elevator.BT_Cab {

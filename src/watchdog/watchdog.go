@@ -2,41 +2,29 @@ package watchdog
 
 import (
 	"Go-heisen/src/order"
-	"Go-heisen/src/orderrepository"
 	"time"
 )
 
 const (
-	millisBetweenTicks = 200
-	timeOutDuration    = 40 * time.Second
+	timeOutDuration = 40 * time.Second
 )
 
 // Watchdog regularly distributes the active orders in the system, and gives expired order to Delegator to be redelegated
 func Watchdog(
-	repoptr *orderrepository.OrderRepository,
+	activeOrdersUpdate chan order.OrderList,
 	toRedelegate chan order.Order,
-	toTransmitter chan order.Order,
 ) {
-	// Initialize monotonic clock
-	initTime := time.Now()
-	getTimeSinceStartup := func() time.Duration {
-		return time.Since(initTime)
-	}
-
-	timestamps := make(map[order.OrderIDType]time.Duration)
-
-	ticker := time.NewTicker(millisBetweenTicks * time.Millisecond)
+	timestamps := make(map[order.OrderIDType]time.Time)
 
 	for {
 		select {
-		case <-ticker.C: // New tick
-
-			activeOrders := repoptr.ReadActiveOrders()
+		case activeOrders := <-activeOrdersUpdate:
+			// Have orders redelegated if timed out
 			for _, activeOrder := range activeOrders {
 				// Check if order already has timestamp
 				id := activeOrder.OrderID
 				orderTimeStamp, alreadyRegistered := timestamps[id]
-				now := getTimeSinceStartup()
+				now := time.Now()
 
 				if alreadyRegistered {
 					// Check if the order has timed out
@@ -45,18 +33,9 @@ func Watchdog(
 							// Order has timed out, have delegator redelegate it
 							toRedelegate <- activeOrder
 						}()
-					} else {
-						// Static redundancy, broadcast the active order to other nodes
-						go func() {
-							toTransmitter <- activeOrder
-						}()
 					}
 				} else {
 					timestamps[id] = now
-					// Static redundancy, broadcast the active order to other nodes
-					go func() {
-						toTransmitter <- activeOrder
-					}()
 				}
 
 			}
@@ -64,6 +43,6 @@ func Watchdog(
 	}
 }
 
-func isTimedOut(timestamp time.Duration, now time.Duration) bool {
-	return now-timestamp > timeOutDuration
+func isTimedOut(timestamp time.Time, now time.Time) bool {
+	return now.Sub(timestamp) > timeOutDuration
 }

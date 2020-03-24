@@ -12,6 +12,7 @@ import (
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
+	"Go-heisen/src/watchdog"
 )
 
 func main() {
@@ -57,6 +58,8 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	transmitOrder := make(chan order.Order)
 	transmitState := make(chan elevator.Elevator)
 	receiveState := make(chan elevator.Elevator)
+	// Watchdog
+	toWatchdog := make(chan order.OrderList)
 
 	orderPort := 44232
 	go bcast.Transmitter(orderPort, transmitOrder)
@@ -69,8 +72,8 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	// Start goroutines
 	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals, elevatorPort)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
-	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, transmitOrder)
-	// go watchdog.Watchdog(readSingleRequests, toDelegate, transmitOrder)
+	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, toWatchdog, transmitOrder)
+	go watchdog.Watchdog(toWatchdog, toRedelegate)
 
 	// Block such that goroutine does not exit
 	<-restartSystem

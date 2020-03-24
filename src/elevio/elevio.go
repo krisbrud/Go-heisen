@@ -34,7 +34,6 @@ func Init(addr string, numFloors int) {
 }
 
 func SetMotorDirection(dir elevator.MotorDirection) {
-	fmt.Printf("Setting motor direction: %v\n", dir)
 	_mtx.Lock()
 	defer _mtx.Unlock()
 	_conn.Write([]byte{1, byte(dir), 0, 0})

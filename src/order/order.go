@@ -52,16 +52,6 @@ func NewInvalidOrder() Order {
 	}
 }
 
-func MakeUnassignedOrder(pushedButton elevator.ButtonEvent) Order {
-	return Order{
-		OrderID:    GetRandomID(),
-		Floor:      pushedButton.Floor,
-		Class:      pushedButton.Button, // TODO Verify that definitions are the same
-		RecipentID: "",
-		Completed:  false,
-	}
-}
-
 var idGeneratorSeeded = false
 
 func GetRandomID() OrderIDType {
