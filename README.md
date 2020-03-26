@@ -30,7 +30,7 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
   - Regularly rebroadcasts all active orders
   - Regularly provides `Watchdog` with all the active orders, s.t. it may redelegate the ones not completed within the deadline
 - `Controller`:
-  - Interfaces with `ElevatorServer`, executes the active orders that belong to the node. Heavily based on [elev_algo](https://github.com/TTK4145/Project-resources/tree/master/elev_algo) from the [`ProjectResources`](https://github.com/TTK4145/Project-resources) repository.
+  - Interfaces with `ElevatorServer`, executes the active orders that belong to the node. Heavily based on [elev_algo](https://github.com/TTK4145/Project-resources/tree/master/elev_algo) from the [`ProjectResources`](https://github.com/TTK4145/Project-resources) repository
   - Controls the motor, lights, door, and receives updates of new floors
   - Informs `OrderManager` when a button is pushed or a floor is stopped at, does not make decisions to create/complete orders itself
   - Informs `Delegator` when the state has changed
