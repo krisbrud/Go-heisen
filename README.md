@@ -43,9 +43,9 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
     - Sends orders to `Delegator` to be redelegated if they are too old
 ### Other modules
 - `elevator`:
-  - Definitions of the state of an elevator, it's identifier and intended behaviour
+  - Definitions of the state of an elevator, their identifiers and intended behaviours
 - `order`:
-  - Definitions of an order, and who is responsible of executing them
+  - Definitions of an order, and who is responsible for executing them
 ### Libraries used
 - `Network-go`
   - Used for broadcasting and receiving elevator state and orders between nodes.
