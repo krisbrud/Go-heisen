@@ -1,10 +1,6 @@
 # Go-heisen
 Elevator Project for TTK4145 Real Time Programming at NTNU
 
-## Libraries used:
-- elevio
-- network-go
-
 ## Design decisions:
 - Random Unique IDs for every order:
     - Makes it possible to differentiate a new order from the one that was completed a minute ago
@@ -12,12 +8,12 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
     - Every node may assign an order to any node
     - Every node stores all orders for all nodes
     - Every node regularly broadcasts all the orders for all nodes it believes are active
-        - If a node receives an active order it knows is completed, it broadcasts the completed order
+        - If a node receives an active order it knows is completed, it broadcasts the completed order so the other nodes may clear it
         - This ensures that the elevators quickly converge to a common belief state, even through restarts and disconnects/reconnects
     - Any node may clear a hall order if it has been finished, regardless of if it was the intended executor
 - Order Delegation
     - The nodes regularly broadcast their states
-    - The node that receives a button push delegates the order to the best recipent given the stored states of the other nodes
+    - The node that receives a button push delegates the order to the best recipent, given the stored states of the other nodes
 - Redundancy
     - If an order is for any reason not completed within the deadline (40 seconds), every node redelegates the order to a new node
         - Remember that all the equivalent orders are cleared if one is completed
@@ -34,7 +30,7 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
   - Regularly rebroadcasts all active orders
   - Regularly provides `Watchdog` with all the active orders, s.t. it may redelegate the ones not completed within the deadline
 - `Controller`:
-  - Interfaces with `ElevatorServer`, executes the active orders that belong to the node. Heavily based on TODO: elev_algo link
+  - Interfaces with `ElevatorServer`, executes the active orders that belong to the node. Heavily based on [elev_algo](https://github.com/TTK4145/Project-resources/tree/master/elev_algo) from the [`ProjectResources`](https://github.com/TTK4145/Project-resources) repository.
   - Controls the motor, lights, door, and receives updates of new floors
   - Informs `OrderManager` when a button is pushed or a floor is stopped at, does not make decisions to create/complete orders itself
   - Informs `Delegator` when the state has changed
@@ -54,4 +50,4 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
 - `Network-go`
   - Used for broadcasting and receiving elevator state and orders between nodes.
 - `driver-go`
-  - Used for interfacing with the [elevator-server](https://github.com/TTK4145/elevator-server) or [`Simulator`](https://github.com/TTK4145/Simulator-v2)
+  - Used for interfacing with the [`ElevatorServer`](https://github.com/TTK4145/) or [`Simulator`](https://github.com/TTK4145/Simulator-v2)
