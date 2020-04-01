@@ -37,7 +37,7 @@ func OrderProcessor(
 		case <-watchdogTicker.C:
 			// Static redundancy, resend all active orders to other nodes
 			// This solves most issues from packet loss and disconnects/reconnects/restarts
-			resendAllActiveOrders(&allOrders, toTransmit)
+			// resendAllActiveOrders(&allOrders, toTransmit)
 
 			// Dynamic redund/activeOrders := allOrders.ReadActiveOrders()
 			//toWatchdog <- activeOrders
@@ -61,7 +61,7 @@ func handleIncomingOrder(
 	}
 
 	localOrder, err := allOrders.ReadSingleOrder(incomingOrder.OrderID)
-	exists := err != nil
+	exists := err == nil
 
 	if exists {
 		fmt.Println("Order already exists!")
@@ -111,6 +111,8 @@ func clearOrdersOnFloorArrival(
 		if activeOrder.Floor == elev.Floor {
 			fmt.Printf("Active order with floor %#v being set to complete\n", activeOrder.Floor)
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
+				fmt.Println("Clearing order!")
+				activeOrder.Print()
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
 				allOrders.WriteOrderToRepository(activeOrder)
