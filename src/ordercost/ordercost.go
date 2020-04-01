@@ -88,7 +88,7 @@ func getIntermediateState(elev elevator.Elevator) elevator.Elevator {
 	case elevator.MD_Down:
 		return elevator.Elevator{
 			Floor:       elevator.GetBottomFloor(),
-			IntendedDir: elevator.MD_Down,
+			IntendedDir: elevator.MD_Up,
 			Behaviour:   elevator.EB_Idle,
 			ElevatorID:  elev.ElevatorID,
 		}

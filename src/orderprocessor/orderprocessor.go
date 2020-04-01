@@ -37,7 +37,7 @@ func OrderProcessor(
 		case <-watchdogTicker.C:
 			// Static redundancy, resend all active orders to other nodes
 			// This solves most issues from packet loss and disconnects/reconnects/restarts
-			//resendAllActiveOrders(&allOrders, toTransmit)
+			resendAllActiveOrders(&allOrders, toTransmit)
 
 			// Dynamic redund/activeOrders := allOrders.ReadActiveOrders()
 			//toWatchdog <- activeOrders

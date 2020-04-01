@@ -9,7 +9,7 @@ const (
 	timeOutDuration = 40 * time.Second
 )
 
-// Watchdog regularly distributes the active orders in the system, and gives expired order to Delegator to be redelegated
+// Watchdog gives expired orders to Delegator to be redelegated
 func Watchdog(
 	activeOrdersUpdate chan order.OrderList,
 	toRedelegate chan order.Order,
@@ -37,7 +37,6 @@ func Watchdog(
 				} else {
 					timestamps[id] = now
 				}
-
 			}
 		}
 	}

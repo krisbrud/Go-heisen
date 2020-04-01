@@ -54,6 +54,7 @@ func Controller(
 	toArrivedFloorHandler chan elevator.Elevator,
 	elevatorPort int,
 ) {
+	// Initialize driver for ElevatorServer
 	elevio.Init(fmt.Sprintf("localhost:%v", elevatorPort), 4)
 
 	buttonUpdates := make(chan elevator.ButtonEvent)
@@ -110,7 +111,8 @@ func Controller(
 
 			if shouldStop(elev, activeOrders) { // && elev.Behaviour == elevator.EB_Moving
 				elevio.SetMotorDirection(elevator.MD_Stop)
-				// Don't change the IntendedDir, prefer to continue doing orders in same direction
+				// Don't change the IntendedDir to MD_Stop,
+				// so we may continue in same direction when door closes
 
 				// Open the door
 				elevio.SetDoorOpenLamp(true)
