@@ -3,7 +3,6 @@ package delegator
 import (
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/order"
-	"Go-heisen/src/ordercost"
 	"fmt"
 )
 
@@ -100,10 +99,10 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 	// fmt.Printf("All states: %#v\n", states)
 
 	for elevatorID, state := range states {
-		cost := ordercost.Cost(o, state)
-		fmt.Printf("Cost for %v: %v", elevatorID, cost)
-		if elevatorID != disallowed && cost < bestCost {
-			bestCost = cost
+		stateCost := cost(o, state)
+		fmt.Printf("Cost for %v: %v", elevatorID, stateCost)
+		if elevatorID != disallowed && stateCost < bestCost {
+			bestCost = stateCost
 			bestElevatorID = elevatorID
 		}
 	}

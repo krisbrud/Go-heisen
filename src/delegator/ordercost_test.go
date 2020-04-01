@@ -1,4 +1,4 @@
-package ordercost
+package delegator
 
 import (
 	"Go-heisen/src/elevator"

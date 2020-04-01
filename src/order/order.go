@@ -55,7 +55,6 @@ func NewInvalidOrder() Order {
 var idGeneratorSeeded = false
 
 func GetRandomID() OrderIDType {
-	// TODO: Add mutex
 	if !idGeneratorSeeded {
 		rand.Seed(time.Now().UTC().UnixNano())
 		idGeneratorSeeded = true

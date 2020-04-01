@@ -1,4 +1,4 @@
-package ordercost
+package delegator
 
 import (
 	"Go-heisen/src/elevator"
@@ -6,20 +6,11 @@ import (
 	"fmt"
 )
 
-/*
-func cost(o, elev, intendedDir)
-	if not travelling towards order
-		tempState = state after travelling to top/bottom
-		return distance to tempstate + cost(o, tempstate)
-	else
-		return distance to floor
-*/
-
 const (
 	maxCost = 1000 // TODO find something clever to do here
 )
 
-func Cost(o order.Order, elev elevator.Elevator) int {
+func cost(o order.Order, elev elevator.Elevator) int {
 	if !o.IsValid() || !elev.IsValid() { // TODO - check what happens if removing ismine
 		// TODO panic/restart
 		return maxCost
@@ -35,7 +26,7 @@ func Cost(o order.Order, elev elevator.Elevator) int {
 		// => add distance before turning around and recursively find
 		// distance from current state to intermediate + from intermediate state to destination
 		intermediateState := getIntermediateState(elev)
-		return distance(elev.Floor, intermediateState.Floor) + Cost(o, intermediateState)
+		return distance(elev.Floor, intermediateState.Floor) + cost(o, intermediateState)
 	}
 
 	// Travelling towards order or standing still, return distance to floor
