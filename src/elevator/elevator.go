@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"fmt"
+	"time"
 )
 
 const (
@@ -42,6 +43,7 @@ type Elevator struct {
 	IntendedDir MotorDirection
 	Behaviour   ElevatorBehaviour
 	ElevatorID  string
+	Timestamp   time.Time
 }
 
 func (eb ElevatorBehaviour) String() string {
@@ -107,6 +109,7 @@ func UninitializedElevatorBetweenFloors() Elevator {
 		IntendedDir: MD_Down,
 		Behaviour:   EB_Moving,
 		ElevatorID:  GetMyElevatorID(),
+		Timestamp:   time.Now(),
 	}
 }
 

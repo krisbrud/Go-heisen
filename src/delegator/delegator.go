@@ -5,6 +5,11 @@ import (
 	"Go-heisen/src/order"
 	"Go-heisen/src/ordercost"
 	"fmt"
+	"time"
+)
+
+const (
+	timeOut = 5 * time.Second
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated
@@ -17,6 +22,7 @@ func Delegator(
 	transmitState chan elevator.Elevator,
 	receiveState chan elevator.Elevator,
 ) {
+
 	redelegations := make(map[order.OrderIDType]bool)
 	elevatorStates := make(map[string]elevator.Elevator)
 
@@ -64,8 +70,16 @@ func Delegator(
 		case elev := <-receiveState:
 			// fmt.Println("Received state from other elevator!")
 			// elev.Print()
+
 			if !elev.IsValid() {
 				fmt.Printf("Invalid elev incoming!")
+				elev.Print()
+				break
+			}
+
+			//Checking that received elevator state is fresh. if no then the elevator is not able to move
+			if time.Now().Sub(elev.Timestamp) > timeOut {
+				fmt.Printf("Received state is too old.")
 				elev.Print()
 				break
 			}
@@ -101,6 +115,11 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 
 	for elevatorID, state := range states {
 		cost := ordercost.Cost(o, state)
+		//Checking whether the elevator is still online and able to move. If no then no orders are delegated to it.
+		if time.Now().Sub(state.Timestamp) > timeOut {
+			fmt.Printf("cost was set to 10000")
+			cost = 10000
+		}
 		fmt.Printf("Cost for %v: %v", elevatorID, cost)
 		if elevatorID != disallowed && cost < bestCost {
 			bestCost = cost

@@ -10,13 +10,14 @@ func shouldStop(elev elevator.Elevator, activeOrders order.OrderList) bool {
 	fmt.Printf("In shouldStop")
 	elev.Print()
 	activeOrders.Print()
-	if len(activeOrders) == 0 {
+	if len(activeOrders) == 0 { //Checking whether there are any actove orders. Stop if no
+		fmt.Printf("No active orders, stopping\n")
 		return true
 	}
 
 	for _, activeOrder := range activeOrders {
 		if activeOrder.Floor == elev.Floor && activeOrder.Class == 0 && elev.IntendedDir == 1 {
-			fmt.Printf("ShouldStop found a floor to stop atwhile going up\n")
+			fmt.Printf("ShouldStop found a floor to stop at while going up\n")
 			return true
 
 		}
@@ -25,12 +26,12 @@ func shouldStop(elev elevator.Elevator, activeOrders order.OrderList) bool {
 			return true
 
 		}
-		if (elev.IntendedDir == -1 && !ordersBelow(elev, activeOrders) && activeOrder.Floor == elev.Floor) || (elev.IntendedDir == 1 && !ordersAbove(elev, activeOrders)) {
-			fmt.Printf("ShouldStop foud no orders below this one and stopped\n")
+		if activeOrder.Class == 2 && activeOrder.Floor == elev.Floor {
+			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
 			return true
 		}
-		if activeOrder.Class == 2 {
-			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
+		if (elev.IntendedDir == -1 && !ordersBelow(elev, activeOrders) && activeOrder.Floor == elev.Floor) || (elev.IntendedDir == 1 && !ordersAbove(elev, activeOrders)) {
+			fmt.Printf("ShouldStop found no orders below this one and stopped\n")
 			return true
 		}
 

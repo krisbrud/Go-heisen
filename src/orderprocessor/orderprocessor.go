@@ -109,7 +109,7 @@ func clearOrdersOnFloorArrival(
 	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 	for _, activeOrder := range repoptr.ReadActiveOrders() {
 		if activeOrder.Floor == elev.Floor {
-			fmt.Printf("Active order with floor %#v being set to complete\n", activeOrder.Floor)
+			fmt.Printf("Active order with floor %#v being set to complete", activeOrder.Floor)
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
