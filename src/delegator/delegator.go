@@ -77,12 +77,8 @@ func Delegator(
 				break
 			}
 
-			//Checking that received elevator state is fresh. if no then the elevator is not able to move
-			if time.Now().Sub(elev.Timestamp) > timeOut {
-				fmt.Printf("Received state is too old.")
-				elev.Print()
-				break
-			}
+			//Making sure states are synced to local time.
+			elev.Timestamp = time.Now()
 
 			// Notify other elevators about own state
 			if elev.ElevatorID == elevator.GetMyElevatorID() {
