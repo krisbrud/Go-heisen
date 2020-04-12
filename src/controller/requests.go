@@ -27,6 +27,7 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 		}
 		if activeOrder.Class == elevator.BT_Cab && activeOrder.Floor == state.Floor {
 			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
+			return true
 		}
 		if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders) && activeOrder.Floor == state.Floor) || (state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
 			fmt.Printf("ShouldStop foud no orders below this one and stopped\n")
