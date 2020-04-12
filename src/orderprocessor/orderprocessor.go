@@ -2,7 +2,6 @@ package orderprocessor
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"fmt"
 	"time"
@@ -10,13 +9,13 @@ import (
 
 // OrderProcessor order from this or other elevators
 func OrderProcessor(
-	incomingOrdersChan chan order.Order,
+	incomingOrdersChan chan elevator.Order,
 	buttonPushes chan elevator.ButtonEvent,
-	floorArrivals chan elevator.Elevator,
-	toController chan order.OrderList,
-	toDelegate chan order.Order,
-	toWatchdog chan order.OrderList,
-	toTransmit chan order.Order,
+	floorArrivals chan elevator.State,
+	toController chan elevator.OrderList,
+	toDelegate chan elevator.Order,
+	toWatchdog chan elevator.OrderList,
+	toTransmit chan elevator.Order,
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
 	watchdogTicker := time.NewTicker(200 * time.Millisecond)
@@ -37,7 +36,7 @@ func OrderProcessor(
 		case <-watchdogTicker.C:
 			// Static redundancy, resend all active orders to other nodes
 			// This solves most issues from packet loss and disconnects/reconnects/restarts
-			//resendAllActiveOrders(&allOrders, toTransmit)
+			// resendAllActiveOrders(&allOrders, toTransmit)
 
 			// Dynamic redund/activeOrders := allOrders.ReadActiveOrders()
 			//toWatchdog <- activeOrders
@@ -46,11 +45,11 @@ func OrderProcessor(
 }
 
 func handleIncomingOrder(
-	incomingOrder order.Order,
+	incomingOrder elevator.Order,
 	allOrders *orderrepository.OrderRepository,
-	toController chan order.OrderList,
-	toDelegate chan order.Order,
-	toTransmit chan order.Order,
+	toController chan elevator.OrderList,
+	toDelegate chan elevator.Order,
+	toTransmit chan elevator.Order,
 ) {
 	fmt.Printf("\nProcessor handling incoming order!\n")
 	incomingOrder.Print()
@@ -61,9 +60,9 @@ func handleIncomingOrder(
 	}
 
 	localOrder, err := allOrders.ReadSingleOrder(incomingOrder.OrderID)
-	exists := err != nil
+	orderAlreadyExists := err == nil
 
-	if exists {
+	if orderAlreadyExists {
 		fmt.Println("Order already exists!")
 		switch {
 		case localOrder.Completed && !incomingOrder.Completed:
@@ -94,23 +93,25 @@ func handleIncomingOrder(
 }
 
 func clearOrdersOnFloorArrival(
-	elev elevator.Elevator,
+	state elevator.State,
 	repoptr *orderrepository.OrderRepository,
 	allOrders *orderrepository.OrderRepository,
-	toController chan order.OrderList,
-	transmitOrder chan order.Order,
+	toController chan elevator.OrderList,
+	transmitOrder chan elevator.Order,
 ) {
-	fmt.Printf("ArrivedFloorHandler! State: %#v\n", elev)
+	fmt.Printf("ArrivedFloorHandler! State: %#v\n", state)
 
-	if !elev.IsValid() {
+	if !state.IsValid() {
 		panic("Invalid state in floor arrival handler")
 	}
 
 	// Read all active orders from OrderRepository. Set the relevant ones as cleared.
 	for _, activeOrder := range repoptr.ReadActiveOrders() {
-		if activeOrder.Floor == elev.Floor {
-			fmt.Printf("Active order with floor %#v being set to complete", activeOrder.Floor)
+		if activeOrder.Floor == state.Floor {
+			fmt.Printf("Active order with floor %#v being set to complete\n", activeOrder.Floor)
 			if activeOrder.IsFromHall() || (activeOrder.IsFromCab() && activeOrder.IsMine()) {
+				fmt.Println("Clearing order!")
+				activeOrder.Print()
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
 				allOrders.WriteOrderToRepository(activeOrder)
@@ -126,7 +127,7 @@ func clearOrdersOnFloorArrival(
 //
 func resendAllActiveOrders(
 	repoptr *orderrepository.OrderRepository,
-	toTransmit chan order.Order,
+	toTransmit chan elevator.Order,
 ) {
 	for _, activeOrder := range repoptr.ReadActiveOrders() {
 		toTransmit <- activeOrder

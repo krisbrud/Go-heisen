@@ -3,10 +3,9 @@ package controller
 import (
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/elevio"
-	"Go-heisen/src/order"
 )
 
-func setAllLights(activeOrders order.OrderList) {
+func setAllLights(activeOrders elevator.OrderList) {
 	// Make local representation to avoid briefly turning lights off before turning them on again
 	numFloors := elevator.GetNumFloors()
 	buttonsPerFloor := 3
@@ -17,11 +16,11 @@ func setAllLights(activeOrders order.OrderList) {
 		lights[i] = make([]bool, buttonsPerFloor, buttonsPerFloor)
 	}
 
-	for _, o := range activeOrders {
-		if !o.Completed && !(o.IsFromCab() && !o.IsMine()) {
+	for _, order := range activeOrders {
+		if !order.Completed && !(order.IsFromCab() && !order.IsMine()) {
 			// Found order that is not completed yet, and is not some other
 			// elevators cab call. Set the light
-			lights[o.Floor][int(o.Class)] = true
+			lights[order.Floor][int(order.Class)] = true
 		}
 	}
 
@@ -29,7 +28,7 @@ func setAllLights(activeOrders order.OrderList) {
 	for floor := range lights {
 		for buttonIdx := range lights[floor] {
 			button := elevator.ButtonType(buttonIdx)
-			if !order.ValidButtonTypeGivenFloor(button, floor) {
+			if !elevator.ValidButtonTypeGivenFloor(button, floor) {
 				continue
 			}
 			lightShouldBeOn := lights[floor][buttonIdx]

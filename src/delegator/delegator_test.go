@@ -2,17 +2,16 @@ package delegator
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
 	"testing"
 )
 
 func TestDelegator(t *testing.T) {
 	// Initialize delegator and channels
-	toDelegate := make(chan order.Order)
-	toRedelegate := make(chan order.Order)
-	toTransmitter := make(chan order.Order)
-	toProcessor := make(chan order.Order)
-	stateUpdates := make(chan elevator.Elevator)
+	toDelegate := make(chan elevator.Order)
+	toRedelegate := make(chan elevator.Order)
+	toTransmitter := make(chan elevator.Order)
+	toProcessor := make(chan elevator.Order)
+	stateUpdates := make(chan elevator.State)
 
 	go Delegator(
 		toDelegate,
@@ -22,7 +21,7 @@ func TestDelegator(t *testing.T) {
 		stateUpdates,
 	)
 
-	// Send state updates s.t. elev1 should take order. Based on example in spec.
+	// Send state updates s.t. elev1 should take elevator. Based on example in spec.
 	stateUpdates <- getStateIdleAtFloor(1, "elev1")
 	stateUpdates <- getStateIdleAtFloor(0, "elev2")
 	stateUpdates <- getStateIdleAtFloor(0, "elev3")
@@ -52,18 +51,18 @@ func TestDelegator(t *testing.T) {
 
 }
 
-func makeTopFloorOrder() order.Order {
-	return order.Order{
-		OrderID:    order.GetRandomID(),
+func makeTopFloorOrder() elevator.Order {
+	return elevator.Order{
+		OrderID:    elevator.GetRandomID(),
 		Floor:      3,
-		Class:      order.HALL_DOWN,
+		Class:      elevator.HALL_DOWN,
 		RecipentID: "",
 		Completed:  false,
 	}
 }
 
-func getStateIdleAtFloor(floor int, id string) elevator.Elevator {
-	return elevator.Elevator{
+func getStateIdleAtFloor(floor int, id string) elevator.State {
+	return elevator.State{
 		Floor:       floor,
 		IntendedDir: elevator.MD_Stop,
 		Behaviour:   elevator.EB_Idle,

@@ -2,7 +2,6 @@ package orderprocessor
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
 	"Go-heisen/src/orderrepository"
 	"fmt"
 )
@@ -11,33 +10,33 @@ import (
 func handleButtonPush(
 	pushedButton elevator.ButtonEvent,
 	repoptr *orderrepository.OrderRepository,
-	incomingOrdersChan chan order.Order,
-	toDelegate chan order.Order,
+	incomingOrdersChan chan elevator.Order,
+	toDelegate chan elevator.Order,
 ) {
 	fmt.Println("handleButtonPush")
 	if !pushedButton.IsValid() {
 		return
 	}
 
-	o := makeUnassignedOrder(pushedButton)
+	order := makeUnassignedOrder(pushedButton)
 
-	if !repoptr.HasEquivalentOrders(o) {
-		if o.Class == elevator.BT_Cab {
+	if !repoptr.HasEquivalentOrders(order) {
+		if order.Class == elevator.BT_Cab {
 			// My cab call, assign to me
-			o.RecipentID = elevator.GetMyElevatorID()
-			go func() { incomingOrdersChan <- o }()
+			order.RecipentID = elevator.GetElevatorID()
+			go func() { incomingOrdersChan <- order }()
 		} else {
 			// No active orders are equivalent, have the new order delegated.
-			go func() { toDelegate <- o }()
+			go func() { toDelegate <- order }()
 		}
 	}
 }
 
-func makeUnassignedOrder(pushedButton elevator.ButtonEvent) order.Order {
-	return order.Order{
-		OrderID:    order.GetRandomID(),
+func makeUnassignedOrder(pushedButton elevator.ButtonEvent) elevator.Order {
+	return elevator.Order{
+		OrderID:    elevator.GetRandomID(),
 		Floor:      pushedButton.Floor,
-		Class:      pushedButton.Button, // TODO Verify that definitions are the same
+		Class:      pushedButton.Button,
 		RecipentID: "",
 		Completed:  false,
 	}
