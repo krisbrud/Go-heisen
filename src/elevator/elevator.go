@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+/*
 const (
 	orderCapacity = 50
 )
@@ -37,7 +38,7 @@ const (
 	EB_DoorOpen
 	EB_Moving
 )
-
+*/
 type Elevator struct {
 	Floor       int
 	IntendedDir MotorDirection
@@ -46,6 +47,7 @@ type Elevator struct {
 	Timestamp   time.Time
 }
 
+/*
 func (eb ElevatorBehaviour) String() string {
 	switch eb {
 	case EB_Idle:
@@ -59,7 +61,7 @@ func (eb ElevatorBehaviour) String() string {
 	}
 
 }
-
+*/
 func (elev Elevator) String() string {
 	return fmt.Sprintf("Elevator:\n\tFloor: %v\n\tIntendedDir: %v\n\tBehaviour: %v\n\tElevatorID: %v\n", elev.Floor, elev.IntendedDir, elev.Behaviour.String(), elev.ElevatorID)
 }
@@ -72,10 +74,10 @@ var numFloors int = 4
 var bottomFloor int = 0
 var topFloor int = bottomFloor + numFloors - 1 // bottomFloor is a valid floor
 
-func GetTopFloor() int    { return topFloor }
+/*func GetTopFloor() int    { return topFloor }
 func GetBottomFloor() int { return bottomFloor }
 func GetNumFloors() int   { return numFloors }
-
+*/
 // TODO setconfiguration?
 
 // IsValid tells us if both fields of Elevator are valid given the current configuration
@@ -83,13 +85,15 @@ func (elev Elevator) IsValid() bool {
 	return bottomFloor <= elev.Floor && elev.Floor <= topFloor
 }
 
+/*
 func (be ButtonEvent) IsValid() bool {
 	return bottomFloor <= be.Floor && be.Floor <= topFloor &&
 		(be.Button == BT_HallUp || be.Button == BT_HallDown || be.Button == BT_Cab)
 }
-
+*/
 func (elev Elevator) IsIdle() bool { return elev.Behaviour == EB_Idle }
 
+/*
 func (dir MotorDirection) Opposite() MotorDirection {
 	switch dir {
 	case MD_Up:
@@ -100,9 +104,10 @@ func (dir MotorDirection) Opposite() MotorDirection {
 		return MD_Stop // TODO Maybe invalid?
 	}
 }
-
+*/
 func (elev Elevator) IsDoorOpen() bool { return elev.Behaviour == EB_DoorOpen }
 
+/*
 func UninitializedElevatorBetweenFloors() Elevator {
 	return Elevator{
 		Floor:       bottomFloor - 1,
@@ -120,7 +125,7 @@ func MakeInvalidState() Elevator {
 		Behaviour:   EB_Idle,
 	}
 }
-
+*/
 var myElevatorID string
 
 func SetMyElevatorID(id string) {

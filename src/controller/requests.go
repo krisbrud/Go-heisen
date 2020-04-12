@@ -9,7 +9,7 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 	fmt.Printf("In shouldStop")
 	state.Print()
 	activeOrders.Print()
-	if len(activeOrders) == 0 { //Checking whether there are any actove orders. Stop if no
+	if len(activeOrders) == 0 { //Checking whether there are any active orders. Stop if no
 		fmt.Printf("No active orders, stopping\n")
 		return true
 	}
@@ -34,27 +34,6 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 		}
 
 	}
-
-	// switch state.IntendedDir {
-	// case elevator.MD_Down:
-	// 	shouldStopAtOrder := func(order elevator.Order) bool {
-	// 		atSameFloor := state.Floor == order.Floor
-	// 		notOppositeDirection := order.IsFromCab() || order.Class == elevator.BT_HallUp
-
-	// 		return atSameFloor && notOppositeDirection && order.IsMine()
-	// 	}
-	// 	return anyOrder(activeOrders, shouldStopAtOrder) || !ordersBelow(state, activeOrders)
-
-	// case elevator.MD_Up:
-	// 	shouldStopAtOrder := func(order elevator.Order) bool {
-	// 		atSameFloor := state.Floor == order.Floor
-	// 		notOppositeDirection := order.IsFromCab() || order.Class == elevator.BT_HallDown
-
-	// 		return atSameFloor && notOppositeDirection && order.IsMine()
-	// 	}
-	// 	return anyOrder(activeOrders, shouldStopAtOrder) || !ordersAbove(state, activeOrders)
-	// }
-
 	return false // Default
 }
 

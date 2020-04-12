@@ -11,7 +11,7 @@ const (
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated
-// based on it's current belief state
+// based on it's current belief states
 func Delegator(
 	toDelegate chan elevator.Order,
 	toRedelegate chan elevator.Order,
@@ -20,14 +20,8 @@ func Delegator(
 	transmitState chan elevator.State,
 	receiveState chan elevator.State,
 ) {
-<<<<<<< HEAD
-
-	redelegations := make(map[order.OrderIDType]bool)
-	elevatorStates := make(map[string]elevator.Elevator)
-=======
 	redelegations := make(map[elevator.OrderIDType]bool)
 	elevatorStates := make(map[string]elevator.State)
->>>>>>> b6dd2728226953eb50ed35fcb350547afbda79ff
 
 	// TODO stateupdates
 	for {
@@ -72,23 +66,15 @@ func Delegator(
 
 		case state := <-receiveState:
 			// fmt.Println("Received state from other elevator!")
-<<<<<<< HEAD
-			// elev.Print()
-
-			if !elev.IsValid() {
-				fmt.Printf("Invalid elev incoming!")
-				elev.Print()
-=======
 			// state.Print()
 			if !state.IsValid() {
 				fmt.Printf("Invalid state incoming!")
 				state.Print()
->>>>>>> b6dd2728226953eb50ed35fcb350547afbda79ff
 				break
 			}
 
 			//Making sure states are synced to local time.
-			elev.Timestamp = time.Now()
+			state.Timestamp = time.Now()
 
 			// Notify other elevators about own state
 			if state.ElevatorID == elevator.GetElevatorID() {
@@ -120,22 +106,15 @@ func bestRecipent(order elevator.Order, states map[string]elevator.State, disall
 	// fmt.Printf("All states: %#v\n", states)
 
 	for elevatorID, state := range states {
-<<<<<<< HEAD
-		cost := ordercost.Cost(o, state)
+		stateCost := cost(order, state)
 		//Checking whether the elevator is still online and able to move. If no then no orders are delegated to it.
 		if time.Now().Sub(state.Timestamp) > timeOut {
 			fmt.Printf("cost was set to 10000")
-			cost = 10000
+			stateCost = 10000
 		}
-		fmt.Printf("Cost for %v: %v", elevatorID, cost)
-		if elevatorID != disallowed && cost < bestCost {
-			bestCost = cost
-=======
-		stateCost := cost(order, state)
 		fmt.Printf("Cost for %v: %v", elevatorID, stateCost)
 		if elevatorID != disallowed && stateCost < bestCost {
 			bestCost = stateCost
->>>>>>> b6dd2728226953eb50ed35fcb350547afbda79ff
 			bestElevatorID = elevatorID
 		}
 	}

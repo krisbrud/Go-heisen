@@ -2,6 +2,7 @@ package elevator
 
 import (
 	"fmt"
+	"time"
 )
 
 const (
@@ -42,6 +43,7 @@ type State struct {
 	IntendedDir MotorDirection
 	Behaviour   ElevatorBehaviour
 	ElevatorID  string
+	Timestamp   time.Time
 }
 
 func (eb ElevatorBehaviour) String() string {
