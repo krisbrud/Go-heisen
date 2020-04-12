@@ -1,86 +1,49 @@
 package main
 
 import (
-	"Go-heisen/src/arrivedfloorhandler"
-	"Go-heisen/src/buttonpushhandler"
+	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
-	"Go-heisen/src/elevatorstate"
-	"Go-heisen/src/networkreceiver"
-	"Go-heisen/src/networktransmitter"
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/orderprocessor"
-	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/watchdog"
-	"fmt"
-	"time"
 )
 
 func main() {
-	restartSystem := make(chan bool)
-
-	go startSystem(restartSystem)
-
-	for {
-		select {
-		case <-restartSystem:
-			go startSystem(restartSystem)
-		}
-	}
-}
-
-func startSystem(restartSystem chan bool) {
+	// Parse command line flags
+	elevator.ParseConfigFlags()
 
 	// Declare channels, organized after who reads them
-	restart := make(chan bool)
-
-	// ArrivedFloorHandler
-	arrivedStateUpdates := make(chan elevatorstate.ElevatorState)
-	arrivedRepoReads := make(chan order.Order)
-	// ButtonPushHandler
-	buttonPushOrders := make(chan order.Order)
-	buttonRepoReads := make(chan order.Order)
-	// Controller - None yet!
-	toController := make(chan order.Order)
+	// Controller
+	activeOrders := make(chan elevator.OrderList)
 	// Delegator
-	toDelegator := make(chan order.Order)
-	// LightManager
-	toLightManager := make(chan order.Order)
-	// OrderRepository
-	repoReadRequests := make(chan orderrepository.ReadRequest)
-	processorRepoWrites := make(chan order.Order)
+	toDelegate := make(chan elevator.Order)
+	toRedelegate := make(chan elevator.Order)
 	// OrderProcessor
-	toOrderProcessor := make(chan order.Order)
-	processorRepoReads := make(chan order.Order)
-	// NetworkReceiver
-	toTransmitter := make(chan order.Order)
-	// NetworkTransmitter
-	fromReceiver := make(chan order.Order)
+	buttonPushes := make(chan elevator.ButtonEvent)
+	floorArrivals := make(chan elevator.State)
+	toOrderProcessor := make(chan elevator.Order)
+	// Network
+	transmitOrder := make(chan elevator.Order)
+	transmitState := make(chan elevator.State)
+	receiveState := make(chan elevator.State)
 	// Watchdog
-	watchdogRepoReads := make(chan order.Order)
+	toWatchdog := make(chan elevator.OrderList)
+
+	orderPort := 44232
+	go bcast.Transmitter(orderPort, transmitOrder)
+	go bcast.Receiver(orderPort, toOrderProcessor)
+
+	statePort := 44233
+	go bcast.Transmitter(statePort, transmitState)
+	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go arrivedfloorhandler.ArrivedFloorHandler(arrivedStateUpdates, repoReadRequests, arrivedRepoReads, toOrderProcessor)
-	go buttonpushhandler.ButtonPushHandler(buttonPushOrders, buttonRepoReads, repoReadRequests, toDelegator)
-	go controller.Controller(toController)
-	go delegator.Delegator(toDelegator, toTransmitter)
-	go orderrepository.OrderRepository(repoReadRequests, processorRepoWrites, processorRepoReads, buttonRepoReads, arrivedRepoReads, watchdogRepoReads)
-	go orderprocessor.OrderProcessor(toOrderProcessor, toTransmitter, repoReadRequests, processorRepoReads, processorRepoWrites, toController, toLightManager)
-	go networkreceiver.NetworkReceiver(fromReceiver)
-	go networktransmitter.NewtorkTransmitter(toTransmitter)
-	go watchdog.Watchdog(repoReadRequests, toDelegator, toTransmitter)
+	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals)
+	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
+	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, toWatchdog, transmitOrder)
+	go watchdog.Watchdog(toWatchdog, toRedelegate)
 
-	tick := time.Tick(1000 * time.Millisecond) // 1 second
-
-	for {
-		select {
-		case <-tick:
-			fmt.Println("Tick!") // Needed currently to prevent deadlock...
-		case <-restart:
-			// Something wrong happened, restart the system
-			break
-		}
-	}
-
-	restartSystem <- true
+	// Block such that main goroutine does not exit
+	select {}
 }

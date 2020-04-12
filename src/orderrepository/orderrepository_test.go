@@ -1,26 +1,16 @@
 package orderrepository
 
 import (
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/testutils"
 	"testing"
 )
 
 func TestOrderRepository(t *testing.T) {
-	readSingleRequests := make(chan ReadRequest)
-	readAllRequests := make(chan ReadRequest)
-	writeRequests := make(chan WriteRequest)
 
-	go OrderRepository(readSingleRequests, readAllRequests, writeRequests)
+	repo := MakeEmptyOrderRepository()
 
-	nonExistingID := "Non-existent;)"
-	myReadReq := MakeReadRequest(nonExistingID)
-
-	readSingleRequests <- myReadReq
-
-	if result := <-myReadReq.ResponseCh; result.IsValid() {
-		t.Errorf("Order that should not exist exists!: %v", result)
-	}
+	nonExistingID := elevator.OrderIDType(12364)
 
 	// Test writing some order and reading it back
 	someOrder := testutils.GetSomeOrder()
@@ -52,7 +42,7 @@ func TestOrderRepository(t *testing.T) {
 
 	someOtherReadReq := ReadRequest{
 		someOtherOrder.OrderID,
-		make(chan order.Order),
+		make(chan elevator.Order),
 	}
 	readSingleRequests <- someOtherReadReq
 

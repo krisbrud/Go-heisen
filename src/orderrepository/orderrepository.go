@@ -1,77 +1,84 @@
 package orderrepository
 
 import (
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"fmt"
+	"sync"
 )
 
-// ReadRequest serves as a request to read an order from OrderRepository
-type ReadRequest struct {
-	OrderID    string
-	ResponseCh chan order.Order
+const (
+	defaultCapacity = 100
+)
+
+type OrderRepository struct {
+	orders map[elevator.OrderIDType]elevator.Order
+	mtx    sync.Mutex
 }
 
-// MakeReadRequest returns a ReadRequest with a new response channel
-func MakeReadRequest(OrderID string) ReadRequest {
-	return ReadRequest{OrderID, make(chan order.Order)}
+func MakeEmptyOrderRepository() OrderRepository {
+	return OrderRepository{
+		orders: make(map[elevator.OrderIDType]elevator.Order),
+		// Mutex mtx implicitly initialized
+	}
 }
 
-// MakeReadAllActiveRequest makes a ReadRequest that will read back all active orders
-func MakeReadAllActiveRequest() ReadRequest { return ReadRequest{"", make(chan order.Order)} }
+// ReadSingleOrder looks for a single order in the OrderRepository, and returns an error if it isn't found
+func (repoptr *OrderRepository) ReadSingleOrder(id elevator.OrderIDType) (elevator.Order, error) {
+	repoptr.mtx.Lock()
+	defer repoptr.mtx.Unlock()
+	order, found := repoptr.orders[id]
 
-// MakeWriteRequest returns a WriteRequest with a success response channel
-func MakeWriteRequest(orderToWrite order.Order) WriteRequest {
-	return WriteRequest{orderToWrite, make(chan bool)}
+	var err error = nil
+	if !found {
+		order = elevator.NewInvalidOrder()
+		err = fmt.Errorf("could not find order with id %v in OrderRepository", id)
+	} else if !order.IsValid() {
+		panic(fmt.Sprintf("invalid order %v inside OrderRepository", order.String()))
+	}
+
+	return order, err
 }
 
-// WriteRequest makes it possible for other modules to write to OrderRepository
-type WriteRequest struct {
-	OrderToWrite order.Order
-	SuccessCh    chan bool
-}
+// ReadActiveOrders returns a slice of all the orders in the OrderRepository which are not marked as completed
+func (repoptr *OrderRepository) ReadActiveOrders() elevator.OrderList {
+	active := make(elevator.OrderList, 0)
 
-// OrderRepository is the single source of truth of all known orders in all nodes.
-func OrderRepository(
-	readSingleRequests chan ReadRequest,
-	readAllActiveRequests chan ReadRequest,
-	writeRequests chan WriteRequest,
-) {
-	allOrders := make(map[string]order.Order)
-
-	for {
-		select {
-		case readReq := <-readSingleRequests:
-			storedOrder, ok := allOrders[readReq.OrderID]
-			if !ok {
-				// Order does not exist, inform Reader by sending invalid order back
-				storedOrder = order.NewInvalidOrder()
-			}
-
-			readReq.ResponseCh <- storedOrder // Send order back to requester
-			close(readReq.ResponseCh)
-
-		case readReq := <-readAllActiveRequests:
-			// Read back all orders on the request and close channel afterwards
-			for _, storedOrder := range allOrders {
-				if !storedOrder.Completed {
-					if storedOrder.IsValid() {
-						readReq.ResponseCh <- storedOrder
-					} else {
-						// Invalid Order in OrderRepository for some reason. Restart.
-						// TODO restart mechanics
-						fmt.Println("Invalid order in repository!")
-					}
-				}
-			}
-			close(readReq.ResponseCh)
-
-		case writeReq := <-writeRequests:
-			if writeReq.OrderToWrite.IsValid() {
-				allOrders[writeReq.OrderToWrite.OrderID] = writeReq.OrderToWrite
-				go func() { writeReq.SuccessCh <- true }() // Don't wait for SuccessCh to be read
+	repoptr.mtx.Lock()
+	defer repoptr.mtx.Unlock()
+	// Iterate through all the orders, add the ones that are not completed
+	for _, order := range repoptr.orders {
+		if !order.Completed {
+			if order.IsValid() {
+				active = append(active, order)
 			} else {
-				go func() { writeReq.SuccessCh <- false }()
+				panic(fmt.Sprintf("invalid order %v inside OrderRepository", order.String()))
 			}
 		}
 	}
+
+	return active
+}
+
+// WriteOrderToRepository writes the order to the OrderRepository, and panics if the order is invalid
+func (repoptr *OrderRepository) WriteOrderToRepository(order elevator.Order) {
+	if !order.IsValid() {
+		panic("trying to write invalid order %v to OrderRepository")
+	}
+
+	repoptr.mtx.Lock()
+	defer repoptr.mtx.Unlock()
+	repoptr.orders[order.OrderID] = order
+}
+
+// HasEquivalentOrders returns true if the OrderRepository has at least one order that is equivalent
+func (repoptr *OrderRepository) HasEquivalentOrders(order elevator.Order) bool {
+	repoptr.mtx.Lock()
+	defer repoptr.mtx.Unlock()
+
+	for _, storedOrder := range repoptr.orders {
+		if order.IsEquivalentWith(storedOrder) {
+			return true
+		}
+	}
+	return false
 }
