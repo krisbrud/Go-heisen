@@ -1,7 +1,7 @@
 package orderprocessor
 
 import (
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/testutils"
 	"testing"
@@ -11,9 +11,9 @@ func TestOrderProcessor(t *testing.T) {
 	unusedReadReq := make(chan orderrepository.ReadRequest)
 	singleReadRequests := make(chan orderrepository.ReadRequest)
 	writeRequests := make(chan orderrepository.WriteRequest)
-	incomingOrdersChan := make(chan order.Order)
-	toTransmitter := make(chan order.Order)
-	toController := make(chan order.Order)
+	incomingOrdersChan := make(chan elevator.Order)
+	toTransmitter := make(chan elevator.Order)
+	toController := make(chan elevator.Order)
 
 	go orderrepository.OrderRepository(singleReadRequests, unusedReadReq, writeRequests)
 	go OrderProcessor(incomingOrdersChan, singleReadRequests, writeRequests, toController, toTransmitter)
@@ -59,7 +59,7 @@ func TestOrderProcessor(t *testing.T) {
 	}
 
 	// Try to send an invalid order to the OrderProcessor. It should not write it to OrderRepository
-	invalidOrder := order.NewInvalidOrder()
+	invalidOrder := elevator.NewInvalidOrder()
 	incomingOrdersChan <- invalidOrder
 
 	invalidReadReq := orderrepository.MakeReadRequest(invalidOrder.OrderID)

@@ -1,65 +1,34 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os"
-	"strconv"
-
 	"Go-heisen/src/Network-go/network/bcast"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/watchdog"
 )
 
 func main() {
-	restartSystem := make(chan bool)
-
-	var elevatorPort int = 15657
-	var elevatorID string
-	flag.IntVar(&elevatorPort, "port", 15657, "Port for connection to elevator")
-	flag.StringVar(&elevatorID, "id", "elev"+strconv.Itoa(os.Getppid()), "ID of this elevator")
-	flag.Parse()
-
-	// Set ID of this elevator
-	elevator.SetMyElevatorID(elevatorID)
-
-	fmt.Printf("ElevatorPort %v\n", elevatorPort)
-
-	go startSystem(restartSystem, elevatorPort)
-
-	for {
-		strconv.Itoa(os.Getppid())
-		select {
-		case <-restartSystem:
-			go startSystem(restartSystem, elevatorPort)
-		}
-	}
-}
-
-func startSystem(restartSystem chan bool, elevatorPort int) {
+	// Parse command line flags
+	elevator.ParseConfigFlags()
 
 	// Declare channels, organized after who reads them
-	// ArrivedFloorHandler
-	floorArrivals := make(chan elevator.Elevator)
-	// ButtonPushHandler
-	buttonPushes := make(chan elevator.ButtonEvent)
 	// Controller
-	activeOrders := make(chan order.OrderList)
+	activeOrders := make(chan elevator.OrderList)
 	// Delegator
-	toDelegate := make(chan order.Order)
-	toRedelegate := make(chan order.Order)
+	toDelegate := make(chan elevator.Order)
+	toRedelegate := make(chan elevator.Order)
 	// OrderProcessor
-	toOrderProcessor := make(chan order.Order)
+	buttonPushes := make(chan elevator.ButtonEvent)
+	floorArrivals := make(chan elevator.State)
+	toOrderProcessor := make(chan elevator.Order)
 	// Network
-	transmitOrder := make(chan order.Order)
-	transmitState := make(chan elevator.Elevator)
-	receiveState := make(chan elevator.Elevator)
+	transmitOrder := make(chan elevator.Order)
+	transmitState := make(chan elevator.State)
+	receiveState := make(chan elevator.State)
 	// Watchdog
-	toWatchdog := make(chan order.OrderList)
+	toWatchdog := make(chan elevator.OrderList)
 
 	orderPort := 44232
 	go bcast.Transmitter(orderPort, transmitOrder)
@@ -70,12 +39,11 @@ func startSystem(restartSystem chan bool, elevatorPort int) {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals, elevatorPort)
+	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
 	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, toWatchdog, transmitOrder)
 	go watchdog.Watchdog(toWatchdog, toRedelegate)
 
-	// Block such that goroutine does not exit
-	<-restartSystem
-	restartSystem <- true
+	// Block such that main goroutine does not exit
+	select {}
 }

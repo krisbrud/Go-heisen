@@ -1,7 +1,7 @@
 package watchdog
 
 import (
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"time"
 )
 
@@ -11,10 +11,10 @@ const (
 
 // Watchdog gives expired orders to Delegator to be redelegated
 func Watchdog(
-	activeOrdersUpdate chan order.OrderList,
-	toRedelegate chan order.Order,
+	activeOrdersUpdate chan elevator.OrderList,
+	toRedelegate chan elevator.Order,
 ) {
-	timestamps := make(map[order.OrderIDType]time.Time)
+	timestamps := make(map[elevator.OrderIDType]time.Time)
 
 	for {
 		select {

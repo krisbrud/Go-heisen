@@ -1,22 +1,20 @@
 package testutils
 
-import "Go-heisen/src/order"
-
-func GetSomeOrder() order.Order {
-	return order.Order{
+func GetSomeOrder() elevator.Order {
+	return elevator.Order{
 		1234,
 		1,
-		order.CAB,
+		elevator.CAB,
 		"Some recipent",
 		false,
 	}
 }
 
-func GetSomeOtherOrder() order.Order {
-	return order.Order{
+func GetSomeOtherOrder() elevator.Order {
+	return elevator.Order{
 		4321,
 		2,
-		order.CAB,
+		elevator.CAB,
 		"Some other recipent",
 		false,
 	}

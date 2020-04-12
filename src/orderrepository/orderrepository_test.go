@@ -1,7 +1,7 @@
 package orderrepository
 
 import (
-	"Go-heisen/src/order"
+	"Go-heisen/src/elevator"
 	"Go-heisen/src/testutils"
 	"testing"
 )
@@ -10,7 +10,7 @@ func TestOrderRepository(t *testing.T) {
 
 	repo := MakeEmptyOrderRepository()
 
-	nonExistingID := order.OrderIDType(12364)
+	nonExistingID := elevator.OrderIDType(12364)
 
 	// Test writing some order and reading it back
 	someOrder := testutils.GetSomeOrder()
@@ -42,7 +42,7 @@ func TestOrderRepository(t *testing.T) {
 
 	someOtherReadReq := ReadRequest{
 		someOtherOrder.OrderID,
-		make(chan order.Order),
+		make(chan elevator.Order),
 	}
 	readSingleRequests <- someOtherReadReq
 

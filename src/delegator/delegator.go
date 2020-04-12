@@ -2,22 +2,21 @@ package delegator
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
 	"fmt"
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated
 // based on it's current belief state
 func Delegator(
-	toDelegate chan order.Order,
-	toRedelegate chan order.Order,
-	toOrderTransmitter chan order.Order,
-	toProcessor chan order.Order,
-	transmitState chan elevator.Elevator,
-	receiveState chan elevator.Elevator,
+	toDelegate chan elevator.Order,
+	toRedelegate chan elevator.Order,
+	toOrderTransmitter chan elevator.Order,
+	toProcessor chan elevator.Order,
+	transmitState chan elevator.State,
+	receiveState chan elevator.State,
 ) {
-	redelegations := make(map[order.OrderIDType]bool)
-	elevatorStates := make(map[string]elevator.Elevator)
+	redelegations := make(map[elevator.OrderIDType]bool)
+	elevatorStates := make(map[string]elevator.State)
 
 	// TODO stateupdates
 	for {
@@ -48,7 +47,7 @@ func Delegator(
 			redelegations[oldID] = true
 
 			disallowedRecipent := orderToRedelegate.RecipentID
-			orderToRedelegate.OrderID = order.GetRandomID() // Give redelegation of order new ID
+			orderToRedelegate.OrderID = elevator.GetRandomID() // Give redelegation of order new ID
 
 			recipent, err := bestRecipent(orderToRedelegate, elevatorStates, disallowedRecipent)
 			orderToRedelegate.RecipentID = recipent
@@ -60,29 +59,29 @@ func Delegator(
 			toProcessor <- orderToRedelegate
 			toOrderTransmitter <- orderToRedelegate
 
-		case elev := <-receiveState:
+		case state := <-receiveState:
 			// fmt.Println("Received state from other elevator!")
-			// elev.Print()
-			if !elev.IsValid() {
-				fmt.Printf("Invalid elev incoming!")
-				elev.Print()
+			// state.Print()
+			if !state.IsValid() {
+				fmt.Printf("Invalid state incoming!")
+				state.Print()
 				break
 			}
 
 			// Notify other elevators about own state
-			if elev.ElevatorID == elevator.GetMyElevatorID() {
-				oldElev, present := elevatorStates[elev.ElevatorID]
+			if state.ElevatorID == elevator.GetElevatorID() {
+				oldElev, present := elevatorStates[state.ElevatorID]
 				if present {
-					if elev != oldElev {
-						transmitState <- elev
+					if state != oldElev {
+						transmitState <- state
 					}
 				} else {
-					transmitState <- elev
+					transmitState <- state
 				}
 			}
-			// TODO: Possibly add timestamp for elev, only accept states that are
+			// TODO: Possibly add timestamp for state, only accept states that are
 			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
-			elevatorStates[elev.ElevatorID] = elev
+			elevatorStates[state.ElevatorID] = state
 
 			// DEBUG: Print all elevator states:
 			//fmt.Println("All elevator states after delegator update", elevatorStates)
@@ -90,16 +89,16 @@ func Delegator(
 	}
 }
 
-func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed string) (string, error) {
+func bestRecipent(order elevator.Order, states map[string]elevator.State, disallowed string) (string, error) {
 	bestElevatorID := ""
 	bestCost := 10000 // TODO: Refactor
 
-	// fmt.Printf("Finding best recipent for order %#v\n", o)
+	// fmt.Printf("Finding best recipent for order %#v\n", order)
 	// fmt.Printf("Disallowed: %v\n", disallowed)
 	// fmt.Printf("All states: %#v\n", states)
 
 	for elevatorID, state := range states {
-		stateCost := cost(o, state)
+		stateCost := cost(order, state)
 		fmt.Printf("Cost for %v: %v", elevatorID, stateCost)
 		if elevatorID != disallowed && stateCost < bestCost {
 			bestCost = stateCost
@@ -109,8 +108,8 @@ func bestRecipent(o order.Order, states map[string]elevator.Elevator, disallowed
 	fmt.Println("")
 
 	if bestElevatorID == "" {
-		err := fmt.Errorf("Did not find any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", o, states, disallowed)
-		return elevator.GetMyElevatorID(), err
+		err := fmt.Errorf("Did not find any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", order, states, disallowed)
+		return elevator.GetElevatorID(), err
 	}
 
 	return bestElevatorID, nil

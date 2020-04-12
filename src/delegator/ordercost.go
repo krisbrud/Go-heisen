@@ -2,36 +2,32 @@ package delegator
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/order"
-	"fmt"
 )
 
 const (
 	maxCost = 1000 // TODO find something clever to do here
 )
 
-func cost(o order.Order, elev elevator.Elevator) int {
-	if !o.IsValid() || !elev.IsValid() { // TODO - check what happens if removing ismine
+func cost(order elevator.Order, state elevator.State) int {
+	if !order.IsValid() || !state.IsValid() {
 		// TODO panic/restart
 		return maxCost
 	}
 
-	if atDestinationFloor(o, elev) {
+	if atDestinationFloor(order, state) {
 		return 0
 	}
 
-	if !isTravellingTowardsOrder(o, elev) && !elev.IsIdle() {
-		fmt.Println("Inside recursive cost func")
+	if !isTravellingTowardsOrder(order, state) && !state.IsIdle() {
 		// We also need to execute orders before turning around
 		// => add distance before turning around and recursively find
 		// distance from current state to intermediate + from intermediate state to destination
-		intermediateState := getIntermediateState(elev)
-		return distance(elev.Floor, intermediateState.Floor) + cost(o, intermediateState)
+		intermediateState := getIntermediateState(state)
+		return distance(state.Floor, intermediateState.Floor) + cost(order, intermediateState)
 	}
 
 	// Travelling towards order or standing still, return distance to floor
-	fmt.Println("At end of cost func")
-	return distance(o.Floor, elev.Floor)
+	return distance(order.Floor, state.Floor)
 }
 
 func distance(a, b int) int {
@@ -41,47 +37,48 @@ func distance(a, b int) int {
 	return a - b
 }
 
-func isTravellingTowardsOrder(o order.Order, elev elevator.Elevator) bool {
+func isTravellingTowardsOrder(order elevator.Order, state elevator.State) bool {
 	switch {
-	case o.Floor > elev.Floor && elev.IntendedDir == elevator.MD_Up:
+	case order.Floor > state.Floor && state.IntendedDir == elevator.MD_Up:
 		return true
-	case o.Floor < elev.Floor && elev.IntendedDir == elevator.MD_Down:
+	case order.Floor < state.Floor && state.IntendedDir == elevator.MD_Down:
 		return true
 	default:
 		return false
 	}
 }
 
-func atDestinationFloor(o order.Order, elev elevator.Elevator) bool {
-	if o.Floor == elev.Floor {
+func atDestinationFloor(order elevator.Order, state elevator.State) bool {
+	if order.Floor == state.Floor {
 		switch {
-		case o.IsFromCab():
+		case order.IsFromCab():
 			return true
-		case o.Class == elevator.BT_HallUp && elev.IntendedDir != elevator.MD_Down:
+		case order.Class == elevator.BT_HallUp && state.IntendedDir != elevator.MD_Down:
 			return true
-		case o.Class == elevator.BT_HallDown && elev.IntendedDir != elevator.MD_Up:
+		case order.Class == elevator.BT_HallDown && state.IntendedDir != elevator.MD_Up:
 			return true
 		}
 	}
 	return false
 }
 
-func getIntermediateState(elev elevator.Elevator) elevator.Elevator {
+func getIntermediateState(state elevator.State) elevator.State {
 	// Gets the intermediate state that will take place after changing travel direction
-	switch elev.IntendedDir {
+	// E.g. an elevator travelling upwards going to the
+	switch state.IntendedDir {
 	case elevator.MD_Up:
-		return elevator.Elevator{
+		return elevator.State{
 			Floor:       elevator.GetTopFloor(),
 			IntendedDir: elevator.MD_Down,
 			Behaviour:   elevator.EB_Idle,
-			ElevatorID:  elev.ElevatorID,
+			ElevatorID:  state.ElevatorID,
 		}
 	case elevator.MD_Down:
-		return elevator.Elevator{
+		return elevator.State{
 			Floor:       elevator.GetBottomFloor(),
 			IntendedDir: elevator.MD_Up,
 			Behaviour:   elevator.EB_Idle,
-			ElevatorID:  elev.ElevatorID,
+			ElevatorID:  state.ElevatorID,
 		}
 	default:
 		return elevator.MakeInvalidState()
