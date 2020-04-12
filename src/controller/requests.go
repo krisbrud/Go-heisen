@@ -37,7 +37,7 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 	}
 	
 	// Handle the cases where we wish to stop at an order in the opposite direction
-	// E.g. travellling up, we should stop at a hall call going down if there are no orders above it
+	// E.g. travellling up, an elevator should stop at a hall call going down if there are no orders above it
 	if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders)) 
 		|| (state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
 		fmt.Println("ShouldStop found no orders in the direction of travel and stopped")
