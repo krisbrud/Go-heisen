@@ -9,51 +9,40 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 	fmt.Printf("In shouldStop")
 	state.Print()
 	activeOrders.Print()
+
 	if len(activeOrders) == 0 {
+		fmt.Println("No active orders, stopping")
 		return true
 	}
 
 	for _, activeOrder := range activeOrders {
-		if activeOrder.Floor == state.Floor && activeOrder.Class == 0 && state.IntendedDir == 1 {
-			fmt.Printf("ShouldStop found a floor to stop atwhile going up\n")
-			return true
-
+		// Check if the order is at our floor and not in the opposite direction
+		if activeOrder.Floor == state.Floor {
+			switch activeOrder.Class {
+			case elevator.BT_HallUp:
+				if state.IntendedDir == elevator.MD_Up {
+					fmt.Println("ShouldStop found a floor to stop at while going up")
+					return true
+				}
+			case elevator.BT_HallDown:
+				if state.IntendedDir == elevator.MD_Down {
+					fmt.Println("ShouldStop found a floor to stop at while going down")
+					return true
+				}
+			case elevator.BT_Cab:
+				fmt.Println("ShouldStop found a cab call at this floor and stopped")
+				return true
+			}
 		}
-		if activeOrder.Floor == state.Floor && activeOrder.Class == 1 && state.IntendedDir == -1 {
-			fmt.Printf("ShouldStop found a floor to stop at while going down\n")
-			return true
-
-		}
-		if (state.IntendedDir == -1 && !ordersBelow(state, activeOrders) && activeOrder.Floor == state.Floor) || (state.IntendedDir == 1 && !ordersAbove(state, activeOrders)) {
-			fmt.Printf("ShouldStop foud no orders below this one and stopped\n")
-			return true
-		}
-		if activeOrder.Class == 2 {
-			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
-			return true
-		}
-
 	}
-
-	// switch state.IntendedDir {
-	// case elevator.MD_Down:
-	// 	shouldStopAtOrder := func(order elevator.Order) bool {
-	// 		atSameFloor := state.Floor == order.Floor
-	// 		notOppositeDirection := order.IsFromCab() || order.Class == elevator.BT_HallUp
-
-	// 		return atSameFloor && notOppositeDirection && order.IsMine()
-	// 	}
-	// 	return anyOrder(activeOrders, shouldStopAtOrder) || !ordersBelow(state, activeOrders)
-
-	// case elevator.MD_Up:
-	// 	shouldStopAtOrder := func(order elevator.Order) bool {
-	// 		atSameFloor := state.Floor == order.Floor
-	// 		notOppositeDirection := order.IsFromCab() || order.Class == elevator.BT_HallDown
-
-	// 		return atSameFloor && notOppositeDirection && order.IsMine()
-	// 	}
-	// 	return anyOrder(activeOrders, shouldStopAtOrder) || !ordersAbove(state, activeOrders)
-	// }
+	
+	// Handle the cases where we wish to stop at an order in the opposite direction
+	// E.g. travellling up, an elevator should stop at a hall call going down if there are no orders above it
+	if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders)) 
+		|| (state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
+		fmt.Println("ShouldStop found no orders in the direction of travel and stopped")
+		return true
+	}
 
 	return false // Default
 }

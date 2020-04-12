@@ -10,6 +10,7 @@ import (
 
 const (
 	doorDuration  = 3 * time.Second
+	idleDuration  = 2 * time.Second
 	orderCapacity = 100
 )
 
@@ -81,9 +82,11 @@ func Controller(
 		elevio.SetMotorDirection(elevator.MD_Down)
 	}
 
-	// Initialize timer for doors
+	// Initialize timer for doors && idle handler
 	doorTimer := time.NewTimer(math.MaxInt64)
 	doorTimer.Stop()
+	idleTimer := time.NewTimer(math.MaxInt64)
+	idleTimer.Stop()
 
 	activeOrders := make(elevator.OrderList, 0, orderCapacity)
 
@@ -137,11 +140,20 @@ func Controller(
 			// Set the Behaviour accordingly
 			if state.IntendedDir == elevator.MD_Stop {
 				state.Behaviour = elevator.EB_Idle
+				idleTimer.Reset(idleDuration)
 			} else {
 				state.Behaviour = elevator.EB_Moving
 			}
-
 			stateUpdates <- state
+
+		case <-idleTimer.C:
+			//Elevator is idle, send state update to  delegator
+			stateUpdates <- state
+			fmt.Println("Sent idle state update!")
+			if state.Behaviour == elevator.EB_Idle {
+
+				idleTimer.Reset(idleDuration)
+			}
 
 		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")

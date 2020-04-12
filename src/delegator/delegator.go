@@ -3,10 +3,15 @@ package delegator
 import (
 	"Go-heisen/src/elevator"
 	"fmt"
+	"time"
+)
+
+const (
+	timeOut = 5 * time.Second
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated
-// based on it's current belief state
+// based on it's current belief states
 func Delegator(
 	toDelegate chan elevator.Order,
 	toRedelegate chan elevator.Order,
@@ -68,6 +73,9 @@ func Delegator(
 				break
 			}
 
+			//Making sure states are synced to local time.
+			state.Timestamp = time.Now()
+
 			// Notify other elevators about own state
 			if state.ElevatorID == elevator.GetElevatorID() {
 				oldElev, present := elevatorStates[state.ElevatorID]
@@ -99,6 +107,11 @@ func bestRecipent(order elevator.Order, states map[string]elevator.State, disall
 
 	for elevatorID, state := range states {
 		stateCost := cost(order, state)
+		//Checking whether the elevator is still online and able to move. If no then no orders are delegated to it.
+		if time.Now().Sub(state.Timestamp) > timeOut {
+			fmt.Printf("cost was set to 10000")
+			stateCost = 10000
+		}
 		fmt.Printf("Cost for %v: %v", elevatorID, stateCost)
 		if elevatorID != disallowed && stateCost < bestCost {
 			bestCost = stateCost
