@@ -15,20 +15,20 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 	}
 
 	for _, activeOrder := range activeOrders {
-		if activeOrder.Floor == state.Floor && activeOrder.Class == 0 && state.IntendedDir == 1 {
+		if activeOrder.Floor == state.Floor && activeOrder.Class == elevator.BT_HallUp && state.IntendedDir == elevator.MD_Up {
 			fmt.Printf("ShouldStop found a floor to stop atwhile going up\n")
 			return true
 
 		}
-		if activeOrder.Floor == state.Floor && activeOrder.Class == 1 && state.IntendedDir == -1 {
+		if activeOrder.Floor == state.Floor && activeOrder.Class == elevator.BT_HallDown && state.IntendedDir == elevator.MD_Down {
 			fmt.Printf("ShouldStop found a floor to stop at while going down\n")
 			return true
 
 		}
-		if activeOrder.Class == 2 && activeOrder.Floor == state.Floor {
+		if activeOrder.Class == elevator.BT_Cab && activeOrder.Floor == state.Floor {
 			fmt.Printf("ShouldStop found a cab call at this floor and stopped\n")
 		}
-		if (state.IntendedDir == -1 && !ordersBelow(state, activeOrders) && activeOrder.Floor == state.Floor) || (state.IntendedDir == 1 && !ordersAbove(state, activeOrders)) {
+		if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders) && activeOrder.Floor == state.Floor) || (state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
 			fmt.Printf("ShouldStop foud no orders below this one and stopped\n")
 			return true
 		}
