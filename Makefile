@@ -19,10 +19,22 @@ simulators:
 	sleep 0.5
 	gnome-terminal --geometry=64x25+600+500 -- go run src/main/main.go --port=14102 --id=elev2
 
+	# Third elevator, currently ignored
 	gnome-terminal --geometry=64x25+1200+0 -- /bin/sh -c 'echo elev3; SimElevatorServer  --port=14103'
 	sleep 0.5
 	gnome-terminal --geometry=64x25+1200+500 -- go run src/main/main.go --port=14103 --id=elev3
 
+.PHONY: activatepacketloss
+activatepacketloss:
+	sudo iptables -A INPUT -p tcp --dport 44232 -j ACCEPT
+	sudo iptables -A INPUT -p tcp --sport 44232 -j ACCEPT
+	sudo iptables -A INPUT -p tcp --dport 44233 -j ACCEPT
+	sudo iptables -A INPUT -p tcp --sport 44233 -j ACCEPT
+	sudo iptables -A INPUT -m statistic --mode random --probability 0.2 -j DROP
+
+.PHONY: deactivatepacketloss
+deactivatepacketloss:
+	sudo iptables -F
 
 .PHONY: run
 run:
