@@ -8,7 +8,7 @@ import (
 
 const (
 	maxTimeSinceStateUpdate     = 5 * time.Second // Max time since we got an update from an elevator in order to delegate an order to it
-	stateRedistributionInterval = 100 * time.Millisecond
+	stateRedistributionInterval = 500 * time.Millisecond
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated

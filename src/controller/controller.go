@@ -90,7 +90,7 @@ func Controller(
 				go func() { toArrivedFloorHandler <- state }()
 			}
 
-			stateUpdates <- state
+			go func() { stateUpdates <- state }()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
@@ -107,7 +107,7 @@ func Controller(
 			} else {
 				state.Behaviour = elevator.EB_Moving
 			}
-			stateUpdates <- state
+			go func() { stateUpdates <- state }()
 
 		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")

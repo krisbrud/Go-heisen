@@ -7,11 +7,14 @@ import (
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/orderprocessor"
 	"Go-heisen/src/watchdog"
+	"runtime"
 )
 
 func main() {
 	// Parse command line flags
 	elevator.ParseConfigFlags()
+
+	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
 
 	// Declare channels, organized after who reads them
 	// Controller
@@ -39,7 +42,7 @@ func main() {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go controller.Controller(activeOrders, buttonPushes, transmitState, floorArrivals)
+	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
 	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, toWatchdog, transmitOrder)
 	go watchdog.Watchdog(toWatchdog, toRedelegate)

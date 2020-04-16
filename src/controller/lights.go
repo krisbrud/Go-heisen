@@ -24,7 +24,7 @@ func setAllLights(activeOrders []elevator.Order) {
 		}
 	}
 
-	// Iterate through all lights, set
+	// Iterate through lights, set as needed
 	for floor := range lights {
 		for buttonIdx := range lights[floor] {
 			button := elevator.ButtonType(buttonIdx)

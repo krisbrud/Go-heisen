@@ -18,7 +18,7 @@ func OrderProcessor(
 	toTransmit chan elevator.Order,
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
-	watchdogTicker := time.NewTicker(200 * time.Millisecond)
+	watchdogTicker := time.NewTicker(500 * time.Millisecond)
 
 	for {
 		select {
@@ -41,8 +41,7 @@ func OrderProcessor(
 			// Dynamic redundancy
 			activeOrders := allOrders.ReadActiveOrders()
 			fmt.Println("Resending all active orders!")
-			elevator.PrintOrders(activeOrders)
-			toWatchdog <- activeOrders
+			go func() { toWatchdog <- activeOrders }()
 		}
 	}
 }

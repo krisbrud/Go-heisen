@@ -29,10 +29,10 @@ func clearOrdersOnFloorArrival(
 				// We have completed this order, make OrderProcessor register it and tell everyone.
 				activeOrder.SetCompleted()
 				allOrders.WriteOrderToRepository(activeOrder)
+				go func() { transmitOrder <- activeOrder }()
 
 				activeOrders := allOrders.ReadActiveOrders()
 				go func() { toController <- activeOrders }()
-				go func() { transmitOrder <- activeOrder }()
 			}
 		}
 	}
