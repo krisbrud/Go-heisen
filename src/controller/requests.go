@@ -5,10 +5,10 @@ import (
 	"fmt"
 )
 
-func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
+func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
 	fmt.Printf("In shouldStop")
 	state.Print()
-	activeOrders.Print()
+	elevator.PrintOrders(activeOrders)
 
 	if len(activeOrders) == 0 {
 		fmt.Println("No active orders, stopping")

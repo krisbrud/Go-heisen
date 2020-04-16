@@ -28,7 +28,7 @@ var myConfig config
 
 // Reuse the getElevatorConfig code for parsing values automatically
 func GetElevatorDriverPort() int { return getElevatorConfig().ElevatorDriverPort }
-func GetElevatorID() string      { return getElevatorConfig().ElevatorID }
+func GetMyElevatorID() string    { return getElevatorConfig().ElevatorID }
 func GetNumFloors() int          { return getElevatorConfig().NumFloors }
 func GetBottomFloor() int        { return getElevatorConfig().BottomFloor }
 func GetTopFloor() int           { return getElevatorConfig().TopFloor }

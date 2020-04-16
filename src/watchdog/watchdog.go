@@ -11,7 +11,7 @@ const (
 
 // Watchdog gives expired orders to Delegator to be redelegated
 func Watchdog(
-	activeOrdersUpdate chan elevator.OrderList,
+	activeOrdersUpdate chan []elevator.Order,
 	toRedelegate chan elevator.Order,
 ) {
 	timestamps := make(map[elevator.OrderIDType]time.Time)

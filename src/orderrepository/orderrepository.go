@@ -40,8 +40,8 @@ func (repoptr *OrderRepository) ReadSingleOrder(id elevator.OrderIDType) (elevat
 }
 
 // ReadActiveOrders returns a slice of all the orders in the OrderRepository which are not marked as completed
-func (repoptr *OrderRepository) ReadActiveOrders() elevator.OrderList {
-	active := make(elevator.OrderList, 0)
+func (repoptr *OrderRepository) ReadActiveOrders() []elevator.Order {
+	active := make([]elevator.Order, 0)
 
 	repoptr.mtx.Lock()
 	defer repoptr.mtx.Unlock()

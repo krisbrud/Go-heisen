@@ -27,14 +27,12 @@ func (order Order) String() string {
 
 func (order Order) Print() { fmt.Println(order.String()) }
 
-type OrderList []Order
-
-func (ol OrderList) Print() {
-	if len(ol) == 0 {
+func PrintOrders(orders []Order) {
+	if len(orders) == 0 {
 		fmt.Println("Orders: []")
 	} else {
 		fmt.Println("Orders: [")
-		for _, order := range ol {
+		for _, order := range orders {
 			order.Print()
 		}
 		fmt.Println("]")
@@ -83,7 +81,7 @@ func (order Order) IsValid() bool {
 }
 
 func (order Order) IsMine() bool {
-	return order.RecipentID == GetElevatorID()
+	return order.RecipentID == GetMyElevatorID()
 }
 
 func (order Order) IsFromHall() bool {

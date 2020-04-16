@@ -91,6 +91,10 @@ func (dir MotorDirection) Opposite() MotorDirection {
 	}
 }
 
+func (a State) IsEquivalentWithExceptTimestamp(b State) bool {
+	return a.Behaviour == b.Behaviour && a.ElevatorID == b.ElevatorID && a.Floor == b.Floor && a.IntendedDir == b.IntendedDir
+}
+
 func (state State) IsDoorOpen() bool { return state.Behaviour == EB_DoorOpen }
 
 func UninitializedElevatorBetweenFloors() State {
@@ -98,7 +102,7 @@ func UninitializedElevatorBetweenFloors() State {
 		Floor:       GetBottomFloor() - 1,
 		IntendedDir: MD_Down,
 		Behaviour:   EB_Moving,
-		ElevatorID:  GetElevatorID(),
+		ElevatorID:  GetMyElevatorID(),
 	}
 }
 

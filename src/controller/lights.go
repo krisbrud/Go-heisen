@@ -5,7 +5,7 @@ import (
 	"Go-heisen/src/elevio"
 )
 
-func setAllLights(activeOrders elevator.OrderList) {
+func setAllLights(activeOrders []elevator.Order) {
 	// Make local representation to avoid briefly turning lights off before turning them on again
 	numFloors := elevator.GetNumFloors()
 	buttonsPerFloor := 3

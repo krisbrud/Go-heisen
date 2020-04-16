@@ -23,7 +23,7 @@ func handleButtonPush(
 	if !repoptr.HasEquivalentOrders(order) {
 		if order.Class == elevator.BT_Cab {
 			// My cab call, assign to me
-			order.RecipentID = elevator.GetElevatorID()
+			order.RecipentID = elevator.GetMyElevatorID()
 			go func() { incomingOrdersChan <- order }()
 		} else {
 			// No active orders are equivalent, have the new order delegated.

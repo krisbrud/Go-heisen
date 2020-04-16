@@ -18,8 +18,8 @@ func cost(order elevator.Order, state elevator.State) int {
 		return 0
 	}
 
-	if !isTravellingTowardsOrder(order, state) && !state.IsIdle() {
-		// We also need to execute orders before turning around
+	if !isTravellingTowardsOrder(order, state) && state.IntendedDir != elevator.MD_Stop {
+		// The elevator needs to execute orders before turning around
 		// => add distance before turning around and recursively find
 		// distance from current state to intermediate + from intermediate state to destination
 		intermediateState := getIntermediateState(state)

@@ -15,7 +15,7 @@ func main() {
 
 	// Declare channels, organized after who reads them
 	// Controller
-	activeOrders := make(chan elevator.OrderList)
+	activeOrders := make(chan []elevator.Order)
 	// Delegator
 	toDelegate := make(chan elevator.Order)
 	toRedelegate := make(chan elevator.Order)
@@ -28,7 +28,7 @@ func main() {
 	transmitState := make(chan elevator.State)
 	receiveState := make(chan elevator.State)
 	// Watchdog
-	toWatchdog := make(chan elevator.OrderList)
+	toWatchdog := make(chan []elevator.Order)
 
 	orderPort := 44232
 	go bcast.Transmitter(orderPort, transmitOrder)
@@ -39,7 +39,7 @@ func main() {
 	go bcast.Receiver(statePort, receiveState)
 
 	// Start goroutines
-	go controller.Controller(activeOrders, buttonPushes, receiveState, floorArrivals)
+	go controller.Controller(activeOrders, buttonPushes, transmitState, floorArrivals)
 	go delegator.Delegator(toDelegate, toRedelegate, transmitOrder, toOrderProcessor, transmitState, receiveState)
 	go orderprocessor.OrderProcessor(toOrderProcessor, buttonPushes, floorArrivals, activeOrders, toDelegate, toWatchdog, transmitOrder)
 	go watchdog.Watchdog(toWatchdog, toRedelegate)
