@@ -57,6 +57,7 @@ func Controller(
 
 	for {
 		select {
+
 		case buttonEvent := <-buttonUpdates:
 
 			// Print state?
@@ -108,6 +109,7 @@ func Controller(
 				state.Behaviour = elevator.EB_Moving
 			}
 			go func() { stateUpdates <- state }()
+			//setAllLights(activeOrders)
 
 		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")
@@ -135,7 +137,9 @@ func Controller(
 					state.Behaviour = elevator.EB_Moving
 				}
 			}
-
+			//time.Sleep(400 * time.Millisecond)
+			setAllLights(activeOrders)
+			time.Sleep(100 * time.Millisecond)
 			setAllLights(activeOrders)
 		}
 	}

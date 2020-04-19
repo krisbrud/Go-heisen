@@ -18,7 +18,7 @@ func OrderProcessor(
 	toTransmit chan elevator.Order,
 ) {
 	allOrders := orderrepository.MakeEmptyOrderRepository()
-	watchdogTicker := time.NewTicker(500 * time.Millisecond)
+	watchdogTicker := time.NewTicker(2000 * time.Millisecond)
 
 	for {
 		select {
