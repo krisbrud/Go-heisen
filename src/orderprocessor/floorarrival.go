@@ -33,7 +33,7 @@ func clearOrdersOnFloorArrival(
 				go func() { transmitOrder <- activeOrder }()
 
 				activeOrders := allOrders.ReadActiveOrders()
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond) //this fixes a race condition causing lights on elevators to not properly switch off
 				go func() { toController <- activeOrders }()
 
 			}
