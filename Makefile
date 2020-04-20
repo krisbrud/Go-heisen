@@ -19,8 +19,8 @@ simulators:
 	# sleep 0.5
 	# gnome-terminal --geometry=64x25+1200+500 -- go run src/main/main.go --port=14103 --id=elev3
 
-.PHONY: activatepacketloss
-activatepacketloss:
+.PHONY: packetloss
+packetloss:
 	sudo iptables -A INPUT -p udp --dport 44232 -m statistic --mode random --probability 0.2 -j DROP
 	sudo iptables -A INPUT -p udp --dport 44233 -m statistic --mode random --probability 0.2 -j DROP
 	sudo iptables -A INPUT -p udp --sport 44232 -m statistic --mode random --probability 0.2 -j DROP
