@@ -3,7 +3,6 @@ package delegator
 import (
 	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
-	"fmt"
 	"math"
 	"time"
 )
@@ -31,9 +30,6 @@ func Delegator(
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
-			// fmt.Println("Received order to delegate!")
-			// orderToDelegate.Print()
-
 			// Find best recipent for order based on current belief state
 			recipent := bestRecipent(orderToDelegate, elevatorStates, "")
 			orderToDelegate.RecipentID = recipent
@@ -60,12 +56,8 @@ func Delegator(
 			toOrderTransmitter <- orderToRedelegate
 
 		case state := <-receiveState:
-			fmt.Println("Received elevator state!")
-			// state.Print()
 			if !state.IsValid() {
-				fmt.Printf("Invalid state incoming!")
-				state.Print()
-				break
+				break // Ignore invalid incoming state
 			}
 
 			// Make sure states are synced to local time.
@@ -75,7 +67,6 @@ func Delegator(
 
 		case <-stateRedistributionTimer.C:
 			// Redistribute the state regularly, to combat lost packets with state updates
-			fmt.Println("Redistributing state!")
 			if state, ok := elevatorStates[config.GetMyElevatorID()]; ok {
 				go func() { transmitState <- state }()
 			}
@@ -88,17 +79,11 @@ func bestRecipent(order elevator.Order, states map[string]elevator.State, disall
 	bestElevatorID := ""
 	bestCost := math.MaxInt64
 
-	// fmt.Printf("Finding best recipent for order %#v\n", order)
-	// fmt.Printf("Disallowed: %v\n", disallowed)
-	// fmt.Printf("All states: %#v\n", states)
-
 	for elevatorID, state := range states {
 		stateCost := cost(order, state)
 
-		fmt.Printf("Cost for %v: %v\n", state, stateCost)
 		// Check that the state update is recent enough
 		if time.Since(state.Timestamp) > maxTimeSinceStateUpdate {
-			fmt.Println("State", state, "was too old while delegating")
 			continue // The state of this elevator is too old. Don't delegate to it.
 		}
 		if elevatorID != disallowed && stateCost < bestCost {

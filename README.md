@@ -2,7 +2,11 @@
 Elevator Project for TTK4145 Real Time Programming at NTNU
 
 ## How to run
-Run `make simulators` from the root of the project directory to run the system with two nodes. This requires `GNU Make` to be installed.
+Run 
+```
+make simulators
+``` 
+from the root of the project directory to run the system with two nodes. This requires `GNU Make` to be installed.
 
 ## Design decisions:
 - Random Unique IDs for every order:

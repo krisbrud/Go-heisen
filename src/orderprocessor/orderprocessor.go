@@ -2,7 +2,6 @@ package orderprocessor
 
 import (
 	"Go-heisen/src/elevator"
-	"fmt"
 	"time"
 )
 
@@ -49,12 +48,8 @@ func OrderProcessor(
 			// Update the OrderRepository of the incoming order
 			// Also notifies other nodes if receiving an order we know is completed
 			// Sends all active orders to the controller if the state has changed
-			// handleIncomingOrder(incomingOrder, &allOrders, toController, toDelegate, toTransmit)
-			fmt.Printf("\nProcessor handling incoming order!\n")
-			incomingOrder.Print()
 
 			if !incomingOrder.IsValid() {
-				fmt.Println("Incoming order not valid!")
 				continue // Ignore the invalid incoming order
 			}
 
@@ -63,7 +58,6 @@ func OrderProcessor(
 			orderAlreadyExists := err == nil
 
 			if orderAlreadyExists {
-				// fmt.Println("Order already exists!")
 				// Check if the status of the orders are different
 				switch {
 				case localOrder.Completed && !incomingOrder.Completed:
@@ -75,14 +69,11 @@ func OrderProcessor(
 				case !localOrder.Completed && incomingOrder.Completed:
 					// Overwrite existing order as completed. Update controller.
 					allOrders.writeOrderToRepository(incomingOrder)
-					fmt.Println("Order being marked as completed in processor.")
 				default:
 					continue // No changes, don't resend orders to controller
 				}
 			} else {
 				// Incoming order is new. Register to OrderRepository, send to controller and transmitter.
-				fmt.Println("New order incoming in processor")
-
 				allOrders.writeOrderToRepository(incomingOrder)
 				go func() {
 					toTransmit <- incomingOrder

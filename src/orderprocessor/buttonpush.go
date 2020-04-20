@@ -3,7 +3,6 @@ package orderprocessor
 import (
 	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
-	"fmt"
 )
 
 // handleButtonPush creates an order and sends it to be delegated if no equivalent order already exists.
@@ -13,7 +12,6 @@ func handleButtonPush(
 	incomingOrdersChan chan elevator.Order,
 	toDelegate chan elevator.Order,
 ) {
-	fmt.Println("handleButtonPush")
 	if !pushedButton.IsValid() {
 		return
 	}

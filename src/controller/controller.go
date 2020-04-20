@@ -37,15 +37,12 @@ func Controller(
 	select {
 	case newFloor := <-floorUpdates:
 		// Send the floor update again on the channel so the normal handler may do it's routine
-		fmt.Println("Floor update received, sending state back!")
 		go func() {
-			fmt.Println("Starting at floor!")
 			floorUpdates <- newFloor
 		}()
 
 	case <-time.After(200 * time.Millisecond):
 		// Elevator initialized between floors, go downwards.
-		fmt.Println("Started between floors!")
 		state.IntendedDir = elevator.MD_Down
 		state.Behaviour = elevator.EB_Moving
 		elevio.SetMotorDirection(elevator.MD_Down)
@@ -61,9 +58,7 @@ func Controller(
 	for {
 		select {
 		case newFloor := <-floorUpdates:
-			fmt.Printf("Floor update: %#v\n", newFloor)
 			state.Floor = newFloor
-			state.Print()
 			elevio.SetFloorIndicator(state.Floor)
 
 			if shouldStop(state, activeOrders) { // && state.Behaviour == elevator.EB_Moving
@@ -82,10 +77,6 @@ func Controller(
 			go func() { stateUpdates <- state }()
 
 		case buttonEvent := <-buttonUpdates:
-			// Print state?
-			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
-			state.Print()
-
 			if !state.IsValid() {
 				continue // Don't take orders if we have not reached a valid floor yet
 			}
@@ -96,7 +87,6 @@ func Controller(
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
-			fmt.Println("Door timer!")
 			elevio.SetDoorOpenLamp(false)
 
 			// Find and set motor direction
@@ -114,7 +104,7 @@ func Controller(
 
 		//Received new active order list from order processor
 		case activeOrders = <-activeOrdersUpdates:
-			fmt.Println("Update of all orders received!")
+			fmt.Println("Controller received update of active orders!")
 			elevator.PrintOrders(activeOrders)
 
 			state.IntendedDir = chooseDirection(state, activeOrders)
