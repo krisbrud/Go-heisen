@@ -1,4 +1,4 @@
-package orderrepository
+package orderprocessor
 
 import (
 	"Go-heisen/src/elevator"
@@ -8,7 +8,7 @@ import (
 
 func TestOrderRepository(t *testing.T) {
 
-	repo := MakeEmptyOrderRepository()
+	repo := makeEmptyOrderRepository()
 
 	nonExistingID := elevator.OrderIDType(12364)
 

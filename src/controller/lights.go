@@ -1,15 +1,16 @@
 package controller
 
 import (
+	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/elevio"
 )
 
 func setAllLights(activeOrders []elevator.Order) {
-	// Make local representation to avoid briefly turning lights off before turning them on again
-	numFloors := elevator.GetNumFloors()
+	numFloors := config.GetNumFloors()
 	buttonsPerFloor := 3
 
+	// Make local representation to avoid briefly turning lights off before turning them on again
 	// indexed as lights[floor][ButtonType]
 	lights := make([][]bool, numFloors, numFloors)
 	for i := range lights {

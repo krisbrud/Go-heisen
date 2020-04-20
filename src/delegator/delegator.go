@@ -1,8 +1,10 @@
 package delegator
 
 import (
+	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -74,7 +76,7 @@ func Delegator(
 		case <-stateRedistributionTimer.C:
 			// Redistribute the state regularly, to combat lost packets with state updates
 			fmt.Println("Redistributing state!")
-			if state, ok := elevatorStates[elevator.GetMyElevatorID()]; ok {
+			if state, ok := elevatorStates[config.GetMyElevatorID()]; ok {
 				go func() { transmitState <- state }()
 			}
 			stateRedistributionTimer.Reset(stateRedistributionInterval)
@@ -84,7 +86,7 @@ func Delegator(
 
 func bestRecipent(order elevator.Order, states map[string]elevator.State, disallowed string) string {
 	bestElevatorID := ""
-	bestCost := 10000 // TODO: Refactor
+	bestCost := math.MaxInt64
 
 	// fmt.Printf("Finding best recipent for order %#v\n", order)
 	// fmt.Printf("Disallowed: %v\n", disallowed)
@@ -107,7 +109,7 @@ func bestRecipent(order elevator.Order, states map[string]elevator.State, disall
 
 	if bestElevatorID == "" {
 		// Did for some reason not find any valid recipents. Set self as best recipent.
-		return elevator.GetMyElevatorID()
+		return config.GetMyElevatorID()
 	}
 
 	return bestElevatorID

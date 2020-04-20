@@ -21,7 +21,7 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
 ## Modules
 ![Module Diagram](ModuleDiagram.png "Modules and communication")
 ### Concurrent goroutines
-- `OrderManager`:
+- `OrderProcessor`:
   - Keeps track of all orders in all nodes
   - Updates it's `OrderRepository` with incoming orders from other nodes
     - Sends all the active orders to the `Controller` if changes are made
@@ -32,20 +32,18 @@ Elevator Project for TTK4145 Real Time Programming at NTNU
 - `Controller`:
   - Interfaces with `ElevatorServer`, executes the active orders that belong to the node. Heavily based on [elev_algo](https://github.com/TTK4145/Project-resources/tree/master/elev_algo) from the [`ProjectResources`](https://github.com/TTK4145/Project-resources) repository
   - Controls the motor, lights, door, and receives updates of new floors
-  - Informs `OrderManager` when a button is pushed or a floor is stopped at, does not make decisions to create/complete orders itself
+  - Informs `OrderProcessor` when a button is pushed or a floor is stopped at, does not make decisions to create/complete orders itself
   - Informs `Delegator` when the state has changed
 - `Delegator`:
-  - Delegates new orders provided by `OrderManager`
+  - Delegates new orders provided by `OrderProcessor`
   - Orders are delegated to the node with the lowest `Cost`
   - Redelegates orders to a new recipent if provided by `Watchdog` 
 - `Watchdog`:
-  - Checks that active orders provided by `OrderManager` are completed within the deadline
+  - Checks that active orders provided by `OrderProcessor` are completed within the deadline
     - Sends orders to `Delegator` to be redelegated if they are too old
 ### Other modules
 - `elevator`:
-  - Definitions of the state of an elevator, their identifiers and intended behaviours
-- `order`:
-  - Definitions of an order, and who is responsible for executing them
+  - Definitions of orders, elevator state, as well as types for buttons, motor directions etc.
 ### Libraries used
 - `Network-go`
   - Used for broadcasting and receiving elevator state and orders between nodes.

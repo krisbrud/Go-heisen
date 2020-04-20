@@ -1,4 +1,4 @@
-package elevator
+package config
 
 import (
 	"flag"
@@ -9,13 +9,17 @@ import (
 
 // Default values for config
 const (
-	defaultElevatorPort = 15657
-	defaultNumFloors    = 4
+	defaultDriverPort = 15657
+	defaultOrderPort  = 44232
+	defaultStatePort  = 44233
+	defaultNumFloors  = 4
 	// Default ElevatorID dynamically set to make them unique
 )
 
 type config struct {
 	ElevatorDriverPort int
+	OrderPort          int
+	Stateport          int
 	ElevatorID         string
 	NumFloors          int
 	BottomFloor        int
@@ -28,6 +32,8 @@ var myConfig config
 
 // Reuse the getElevatorConfig code for parsing values automatically
 func GetElevatorDriverPort() int { return getElevatorConfig().ElevatorDriverPort }
+func GetOrderPort() int          { return getElevatorConfig().OrderPort }
+func GetStatePort() int          { return getElevatorConfig().Stateport }
 func GetMyElevatorID() string    { return getElevatorConfig().ElevatorID }
 func GetNumFloors() int          { return getElevatorConfig().NumFloors }
 func GetBottomFloor() int        { return getElevatorConfig().BottomFloor }
@@ -35,6 +41,10 @@ func GetTopFloor() int           { return getElevatorConfig().TopFloor }
 
 // ParseConfigFlags parses command line flags for the configuration of the system, and sets the parameters to logical values if not
 func ParseConfigFlags() {
+	if initialized {
+		return // Don't parse flags multiple times, they can't change.
+	}
+
 	mtx.Lock()
 	defer mtx.Unlock()
 	// Ensure unique elevator ids if not provided
@@ -47,8 +57,11 @@ func ParseConfigFlags() {
 	defaultElevatorID := "elev-" + hostName + strconv.Itoa(parentProcessID)
 
 	// Define the flags to parse
-	flag.IntVar(&myConfig.ElevatorDriverPort, "port", defaultElevatorPort, "Port for connection to elevator")
+	flag.IntVar(&myConfig.ElevatorDriverPort, "port", defaultDriverPort, "Port for connection to elevator")
 	flag.IntVar(&myConfig.NumFloors, "floors", defaultNumFloors, "Number of floors in each elevator")
+	flag.IntVar(&myConfig.OrderPort, "orderport", defaultOrderPort, "Port to broadcast and receive order updates")
+	flag.IntVar(&myConfig.Stateport, "stateport", defaultStatePort, "Port to broadcast and receive state updates")
+
 	flag.StringVar(&myConfig.ElevatorID, "id", defaultElevatorID, "ID of this elevator")
 
 	// Parse the flags, set the variables
@@ -62,7 +75,7 @@ func ParseConfigFlags() {
 }
 
 func getElevatorConfig() config {
-	// Make config initialize by reading flags and setting them to default if not presenteEE
+	// Make sure the config is initialized
 	if !initialized {
 		ParseConfigFlags()
 	}

@@ -47,7 +47,7 @@ func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
 	return false // Default
 }
 
-// Generic helper function, returns true if predicateFunc returns true for any order in orderList
+// Generic helper function, returns true if predicateFunc returns true for any order in orderList, returns false otherwise
 func anyOrder(orderList []elevator.Order, predicateFunc func(order elevator.Order) bool) bool {
 	for _, order := range orderList {
 		if predicateFunc(order) {
@@ -57,7 +57,6 @@ func anyOrder(orderList []elevator.Order, predicateFunc func(order elevator.Orde
 	return false
 }
 
-// TODO kanskje fjerne
 func ordersAtCurrentFloor(state elevator.State, activeOrders []elevator.Order) bool {
 	atCurrentFloor := func(order elevator.Order) bool {
 		return order.Floor == state.Floor && order.IsMine()

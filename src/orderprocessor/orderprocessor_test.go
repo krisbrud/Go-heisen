@@ -2,7 +2,6 @@ package orderprocessor
 
 import (
 	"Go-heisen/src/elevator"
-	"Go-heisen/src/orderrepository"
 	"Go-heisen/src/testutils"
 	"testing"
 )

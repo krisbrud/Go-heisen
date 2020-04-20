@@ -2,6 +2,7 @@ package main
 
 import (
 	"Go-heisen/src/Network-go/network/bcast"
+	"Go-heisen/src/config"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
 	"Go-heisen/src/elevator"
@@ -12,9 +13,9 @@ import (
 
 func main() {
 	// Parse command line flags
-	elevator.ParseConfigFlags()
+	config.ParseConfigFlags()
 
-	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	// Declare channels, organized after who reads them
 	// Controller
@@ -22,6 +23,7 @@ func main() {
 	// Delegator
 	toDelegate := make(chan elevator.Order)
 	toRedelegate := make(chan elevator.Order)
+	receiveState := make(chan elevator.State)
 	// OrderProcessor
 	buttonPushes := make(chan elevator.ButtonEvent)
 	floorArrivals := make(chan elevator.State)
@@ -29,15 +31,14 @@ func main() {
 	// Network
 	transmitOrder := make(chan elevator.Order)
 	transmitState := make(chan elevator.State)
-	receiveState := make(chan elevator.State)
 	// Watchdog
 	toWatchdog := make(chan []elevator.Order)
 
-	orderPort := 44232
+	orderPort := config.GetOrderPort()
 	go bcast.Transmitter(orderPort, transmitOrder)
 	go bcast.Receiver(orderPort, toOrderProcessor)
 
-	statePort := 44233
+	statePort := config.GetStatePort()
 	go bcast.Transmitter(statePort, transmitState)
 	go bcast.Receiver(statePort, receiveState)
 

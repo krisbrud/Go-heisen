@@ -53,7 +53,7 @@ func TestDelegator(t *testing.T) {
 
 func makeTopFloorOrder() elevator.Order {
 	return elevator.Order{
-		OrderID:    elevator.GetRandomID(),
+		OrderID:    config.GetRandomID(),
 		Floor:      3,
 		Class:      elevator.HALL_DOWN,
 		RecipentID: "",

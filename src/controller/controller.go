@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
 	"Go-heisen/src/elevio"
 	"fmt"
@@ -13,6 +14,7 @@ const (
 	orderCapacity = 100
 )
 
+// Controller controls the elevator motor and lights, and
 func Controller(
 	activeOrdersUpdates chan []elevator.Order,
 	buttonPushes chan elevator.ButtonEvent,
@@ -20,7 +22,7 @@ func Controller(
 	toArrivedFloorHandler chan elevator.State,
 ) {
 	// Initialize driver for ElevatorServer
-	elevio.Init(fmt.Sprintf("localhost:%v", elevator.GetElevatorDriverPort()), elevator.GetNumFloors())
+	elevio.Init(fmt.Sprintf("localhost:%v", config.GetElevatorDriverPort()), config.GetNumFloors())
 
 	buttonUpdates := make(chan elevator.ButtonEvent)
 	floorUpdates := make(chan int)
@@ -31,7 +33,7 @@ func Controller(
 	// Initialize internal elevator state
 	state := elevator.UninitializedElevatorBetweenFloors()
 
-	// Run elevator downwards if no state update
+	// Run elevator downwards if no floor update is received
 	select {
 	case newFloor := <-floorUpdates:
 		// Send the floor update again on the channel so the normal handler may do it's routine
@@ -40,6 +42,7 @@ func Controller(
 			fmt.Println("Starting at floor!")
 			floorUpdates <- newFloor
 		}()
+
 	case <-time.After(200 * time.Millisecond):
 		// Elevator initialized between floors, go downwards.
 		fmt.Println("Started between floors!")
@@ -48,28 +51,15 @@ func Controller(
 		elevio.SetMotorDirection(elevator.MD_Down)
 	}
 
-	// Initialize timer for doors and idle handler
+	// Initialize timer for door
 	doorTimer := time.NewTimer(math.MaxInt64)
 	doorTimer.Stop()
 
 	activeOrders := make([]elevator.Order, 0, orderCapacity)
-	setAllLights(activeOrders) // Clear all the lights, in case some of them were turned on
+	setAllLights(activeOrders) // Clear all the lights, in case some of them were turned on when we started
 
 	for {
 		select {
-
-		case buttonEvent := <-buttonUpdates:
-
-			// Print state?
-			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
-			state.Print()
-
-			if !state.IsValid() {
-				continue
-			}
-
-			buttonPushes <- buttonEvent // sending button events to order processor
-
 		case newFloor := <-floorUpdates:
 			fmt.Printf("Floor update: %#v\n", newFloor)
 			state.Floor = newFloor
@@ -79,19 +69,30 @@ func Controller(
 			if shouldStop(state, activeOrders) { // && state.Behaviour == elevator.EB_Moving
 				elevio.SetMotorDirection(elevator.MD_Stop)
 				state.IntendedDir = chooseDirection(state, activeOrders)
-				// TODO: Maybe remove comment // We intentionally don't change the IntendedDir to MD_Stop,
-				// so we may easily continue in same direction when door closes
 
 				// Open the door
 				elevio.SetDoorOpenLamp(true)
 				doorTimer.Reset(doorDuration)
 				state.Behaviour = elevator.EB_DoorOpen
 
-				// Make orderprocessor the orders we have fulfilled
+				// Make OrderProcessor clear fulfilled orders (if any)
 				go func() { toArrivedFloorHandler <- state }()
 			}
 			// Sending new state to delegator
 			go func() { stateUpdates <- state }()
+
+		case buttonEvent := <-buttonUpdates:
+			// Print state?
+			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
+			state.Print()
+
+			if !state.IsValid() {
+				continue // Don't take orders if we have not reached a valid floor yet
+			}
+
+			go func() {
+				buttonPushes <- buttonEvent
+			}()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
