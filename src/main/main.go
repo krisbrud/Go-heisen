@@ -2,6 +2,7 @@ package main
 
 import (
 	"Go-heisen/src/Network-go/network/bcast"
+	"Go-heisen/src/config"
 	"Go-heisen/src/controller"
 	"Go-heisen/src/delegator"
 	"Go-heisen/src/elevator"
@@ -12,7 +13,7 @@ import (
 
 func main() {
 	// Parse command line flags
-	elevator.ParseConfigFlags()
+	config.ParseConfigFlags()
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 

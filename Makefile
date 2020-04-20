@@ -1,8 +1,3 @@
-# TODO:
-#	runsimulator
-#	runelevator
-#	build?
-
 .PHONY: singlesim
 singlesim:
 	gnome-terminal -- SimElevatorServer  --port 14100
@@ -31,8 +26,15 @@ activatepacketloss:
 	sudo iptables -A INPUT -p udp --sport 44232 -m statistic --mode random --probability 0.2 -j DROP
 	sudo iptables -A INPUT -p udp --sport 44233 -m statistic --mode random --probability 0.2 -j DROP	
 
-.PHONY: deactivatepacketloss
-deactivatepacketloss:
+.PHONY: disconnectnetwork
+disconnectnetwork:
+	sudo iptables -A INPUT -p udp --dport 44232 -m statistic --mode random --probability 1.0 -j DROP
+	sudo iptables -A INPUT -p udp --dport 44233 -m statistic --mode random --probability 1.0 -j DROP
+	sudo iptables -A INPUT -p udp --sport 44232 -m statistic --mode random --probability 1.0 -j DROP
+	sudo iptables -A INPUT -p udp --sport 44233 -m statistic --mode random --probability 1.0 -j DROP	
+
+.PHONY: normalnetwork
+normalnetwork:
 	sudo iptables -F
 
 .PHONY: run

@@ -81,16 +81,17 @@ func Controller(
 			go func() { stateUpdates <- state }()
 
 		case buttonEvent := <-buttonUpdates:
-
 			// Print state?
 			fmt.Printf("Buttonevent: %#v\n", buttonEvent)
 			state.Print()
 
 			if !state.IsValid() {
-				continue
+				continue // Don't take orders if we have not reached a valid floor yet
 			}
 
-			buttonPushes <- buttonEvent
+			go func() {
+				buttonPushes <- buttonEvent
+			}()
 
 		case <-doorTimer.C:
 			// Door timer timed out, close door.
