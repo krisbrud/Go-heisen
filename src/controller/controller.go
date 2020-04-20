@@ -68,7 +68,7 @@ func Controller(
 				continue
 			}
 
-			buttonPushes <- buttonEvent
+			buttonPushes <- buttonEvent // sending button events to order processor
 
 		case newFloor := <-floorUpdates:
 			fmt.Printf("Floor update: %#v\n", newFloor)
@@ -90,7 +90,7 @@ func Controller(
 				// Make orderprocessor the orders we have fulfilled
 				go func() { toArrivedFloorHandler <- state }()
 			}
-
+			// Sending new state to delegator
 			go func() { stateUpdates <- state }()
 
 		case <-doorTimer.C:
@@ -108,9 +108,10 @@ func Controller(
 			} else {
 				state.Behaviour = elevator.EB_Moving
 			}
+			// Sending new state to delegator
 			go func() { stateUpdates <- state }()
-			//setAllLights(activeOrders)
 
+		//Received new active order list from order processor
 		case activeOrders = <-activeOrdersUpdates:
 			fmt.Println("Update of all orders received!")
 			elevator.PrintOrders(activeOrders)
@@ -137,9 +138,6 @@ func Controller(
 					state.Behaviour = elevator.EB_Moving
 				}
 			}
-			//time.Sleep(400 * time.Millisecond)
-			setAllLights(activeOrders)
-			time.Sleep(100 * time.Millisecond)
 			setAllLights(activeOrders)
 		}
 	}
