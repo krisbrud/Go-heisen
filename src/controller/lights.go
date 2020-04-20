@@ -11,7 +11,7 @@ func setAllLights(activeOrders []elevator.Order) {
 	buttonsPerFloor := 3
 
 	// Make local representation to avoid briefly turning lights off before turning them on again
-	// indexed as lights[floor][ButtonType]
+	// The slice of slices indexed as lights[floor][ButtonType]
 	lights := make([][]bool, numFloors, numFloors)
 	for i := range lights {
 		lights[i] = make([]bool, buttonsPerFloor, buttonsPerFloor)
@@ -25,7 +25,7 @@ func setAllLights(activeOrders []elevator.Order) {
 		}
 	}
 
-	// Iterate through lights, set as needed
+	// Iterate through lights, set and clear as needed
 	for floor := range lights {
 		for buttonIdx := range lights[floor] {
 			button := elevator.ButtonType(buttonIdx)
