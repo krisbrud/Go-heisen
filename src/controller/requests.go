@@ -2,16 +2,10 @@ package controller
 
 import (
 	"Go-heisen/src/elevator"
-	"fmt"
 )
 
 func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
-	fmt.Printf("In shouldStop")
-	state.Print()
-	elevator.PrintOrders(activeOrders)
-
 	if len(activeOrders) == 0 {
-		fmt.Println("No active orders, stopping")
 		return true
 	}
 
@@ -21,16 +15,13 @@ func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
 			switch activeOrder.Class {
 			case elevator.BT_HallUp:
 				if state.IntendedDir == elevator.MD_Up {
-					fmt.Println("ShouldStop found a floor to stop at while going up")
 					return true
 				}
 			case elevator.BT_HallDown:
 				if state.IntendedDir == elevator.MD_Down {
-					fmt.Println("ShouldStop found a floor to stop at while going down")
 					return true
 				}
 			case elevator.BT_Cab:
-				fmt.Println("ShouldStop found a cab call at this floor and stopped")
 				return true
 			}
 		}
@@ -40,7 +31,6 @@ func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
 	// E.g. travellling up, an elevator should stop at a hall call going down if there are no orders above it
 	if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders)) ||
 		(state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
-		fmt.Println("ShouldStop found no orders in the direction of travel and stopped")
 		return true
 	}
 

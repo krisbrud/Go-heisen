@@ -40,7 +40,7 @@ func PrintOrders(orders []Order) {
 	}
 }
 
-func NewInvalidOrder() Order {
+func MakeInvalidOrder() Order {
 	return Order{
 		invalidOrderID,
 		-1,

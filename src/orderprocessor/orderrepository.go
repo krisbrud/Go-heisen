@@ -28,7 +28,7 @@ func (repoptr *OrderRepository) readSingleOrder(id elevator.OrderIDType) (elevat
 
 	var err error = nil
 	if !found {
-		order = elevator.NewInvalidOrder()
+		order = elevator.MakeInvalidOrder()
 		err = fmt.Errorf("could not find order with id %v in OrderRepository", id)
 	} else if !order.IsValid() {
 		panic(fmt.Sprintf("invalid order %v inside OrderRepository", order.String()))

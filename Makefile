@@ -8,19 +8,19 @@ singlesim:
 simulators:
 	gnome-terminal --geometry=64x25+0+0 -- /bin/sh -c 'echo elev1; SimElevatorServer  --port=14101'
 	sleep 0.5
-	gnome-terminal --geometry=64x25+0+500 -- go run -race src/main/main.go --port=14101 --id=elev1 || read
+	gnome-terminal --geometry=64x25+0+500 -- go run src/main/main.go --port=14101 --id=elev1 || read
 
-	gnome-terminal --geometry=64x25+600+0 -- /bin/sh -c 'echo elev2; SimElevatorServer  --port=14102'
+	gnome-terminal --geometry=64x25+700+0 -- /bin/sh -c 'echo elev2; SimElevatorServer  --port=14102'
 	sleep 0.5
-	gnome-terminal --geometry=64x25+600+500 -- go run -race src/main/main.go --port=14102 --id=elev2 || read
+	gnome-terminal --geometry=64x25+700+500 -- go run src/main/main.go --port=14102 --id=elev2 || read
 
 	# Third elevator, currently ignored
 	# gnome-terminal --geometry=64x25+1200+0 -- /bin/sh -c 'echo elev3; SimElevatorServer  --port=14103'
 	# sleep 0.5
 	# gnome-terminal --geometry=64x25+1200+500 -- go run src/main/main.go --port=14103 --id=elev3
 
-.PHONY: activatepacketloss
-activatepacketloss:
+.PHONY: packetloss
+packetloss:
 	sudo iptables -A INPUT -p udp --dport 44232 -m statistic --mode random --probability 0.2 -j DROP
 	sudo iptables -A INPUT -p udp --dport 44233 -m statistic --mode random --probability 0.2 -j DROP
 	sudo iptables -A INPUT -p udp --sport 44232 -m statistic --mode random --probability 0.2 -j DROP
@@ -37,14 +37,9 @@ disconnectnetwork:
 normalnetwork:
 	sudo iptables -F
 
-.PHONY: run
-run:
-	go run src/main/main.go
-
-.PHONY: test
-test:
-	go test ./...
-
 .PHONY: lint
 lint:
 	gofmt -w src/**/*.go
+
+main: 
+	go build src/main/main.go
