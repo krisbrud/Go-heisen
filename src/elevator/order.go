@@ -1,6 +1,7 @@
 package elevator
 
 import (
+	"Go-heisen/src/config"
 	"fmt"
 	"math/rand"
 	"time"
@@ -27,14 +28,12 @@ func (order Order) String() string {
 
 func (order Order) Print() { fmt.Println(order.String()) }
 
-type OrderList []Order
-
-func (ol OrderList) Print() {
-	if len(ol) == 0 {
+func PrintOrders(orders []Order) {
+	if len(orders) == 0 {
 		fmt.Println("Orders: []")
 	} else {
 		fmt.Println("Orders: [")
-		for _, order := range ol {
+		for _, order := range orders {
 			order.Print()
 		}
 		fmt.Println("]")
@@ -67,14 +66,13 @@ func (order *Order) SetCompleted() { order.Completed = true }
 func ValidButtonTypeGivenFloor(bt ButtonType, floor int) bool {
 	switch bt {
 	case BT_Cab:
-		return GetBottomFloor() <= floor && floor <= GetTopFloor()
+		return config.GetBottomFloor() <= floor && floor <= config.GetTopFloor()
 	case BT_HallDown:
-		return GetBottomFloor()+1 <= floor && floor <= GetTopFloor()
+		return config.GetBottomFloor()+1 <= floor && floor <= config.GetTopFloor()
 	case BT_HallUp:
-		return GetBottomFloor() <= floor && floor <= GetTopFloor()-1
+		return config.GetBottomFloor() <= floor && floor <= config.GetTopFloor()-1
 	default:
-		// Invalid ButtonType
-		return false
+		return false // Invalid ButtonType
 	}
 }
 
@@ -83,7 +81,7 @@ func (order Order) IsValid() bool {
 }
 
 func (order Order) IsMine() bool {
-	return order.RecipentID == GetElevatorID()
+	return order.RecipentID == config.GetMyElevatorID()
 }
 
 func (order Order) IsFromHall() bool {

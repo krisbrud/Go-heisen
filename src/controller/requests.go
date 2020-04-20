@@ -5,10 +5,10 @@ import (
 	"fmt"
 )
 
-func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
+func shouldStop(state elevator.State, activeOrders []elevator.Order) bool {
 	fmt.Printf("In shouldStop")
 	state.Print()
-	activeOrders.Print()
+	elevator.PrintOrders(activeOrders)
 
 	if len(activeOrders) == 0 {
 		fmt.Println("No active orders, stopping")
@@ -35,11 +35,11 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 			}
 		}
 	}
-	
+
 	// Handle the cases where we wish to stop at an order in the opposite direction
 	// E.g. travellling up, an elevator should stop at a hall call going down if there are no orders above it
-	if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders)) 
-		|| (state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
+	if (state.IntendedDir == elevator.MD_Down && !ordersBelow(state, activeOrders)) ||
+		(state.IntendedDir == elevator.MD_Up && !ordersAbove(state, activeOrders)) {
 		fmt.Println("ShouldStop found no orders in the direction of travel and stopped")
 		return true
 	}
@@ -47,7 +47,7 @@ func shouldStop(state elevator.State, activeOrders elevator.OrderList) bool {
 	return false // Default
 }
 
-// Generic helper function, returns true if predicateFunc returns true for any order in orderList
+// Generic helper function, returns true if predicateFunc returns true for any order in orderList, returns false otherwise
 func anyOrder(orderList []elevator.Order, predicateFunc func(order elevator.Order) bool) bool {
 	for _, order := range orderList {
 		if predicateFunc(order) {
@@ -57,7 +57,6 @@ func anyOrder(orderList []elevator.Order, predicateFunc func(order elevator.Orde
 	return false
 }
 
-// TODO kanskje fjerne
 func ordersAtCurrentFloor(state elevator.State, activeOrders []elevator.Order) bool {
 	atCurrentFloor := func(order elevator.Order) bool {
 		return order.Floor == state.Floor && order.IsMine()

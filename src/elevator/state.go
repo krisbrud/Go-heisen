@@ -1,12 +1,9 @@
 package elevator
 
 import (
+	"Go-heisen/src/config"
 	"fmt"
 	"time"
-)
-
-const (
-	orderCapacity = 50
 )
 
 type MotorDirection int
@@ -70,41 +67,34 @@ func (state State) Print() {
 
 // IsValid tells us if both fields of State are valid given the current configuration
 func (state State) IsValid() bool {
-	return GetBottomFloor() <= state.Floor && state.Floor <= GetTopFloor()
+	return config.GetBottomFloor() <= state.Floor && state.Floor <= config.GetTopFloor()
 }
 
 func (be ButtonEvent) IsValid() bool {
-	return GetBottomFloor() <= be.Floor && be.Floor <= GetTopFloor() &&
+	return config.GetBottomFloor() <= be.Floor && be.Floor <= config.GetTopFloor() &&
 		(be.Button == BT_HallUp || be.Button == BT_HallDown || be.Button == BT_Cab)
 }
 
 func (state State) IsIdle() bool { return state.Behaviour == EB_Idle }
 
-func (dir MotorDirection) Opposite() MotorDirection {
-	switch dir {
-	case MD_Up:
-		return MD_Down
-	case MD_Down:
-		return MD_Up
-	default:
-		return MD_Stop
-	}
+func (a State) IsEquivalentWithExceptTimestamp(b State) bool {
+	return a.Behaviour == b.Behaviour && a.ElevatorID == b.ElevatorID && a.Floor == b.Floor && a.IntendedDir == b.IntendedDir
 }
 
 func (state State) IsDoorOpen() bool { return state.Behaviour == EB_DoorOpen }
 
 func UninitializedElevatorBetweenFloors() State {
 	return State{
-		Floor:       GetBottomFloor() - 1,
+		Floor:       config.GetBottomFloor() - 1,
 		IntendedDir: MD_Down,
 		Behaviour:   EB_Moving,
-		ElevatorID:  GetElevatorID(),
+		ElevatorID:  config.GetMyElevatorID(),
 	}
 }
 
 func MakeInvalidState() State {
 	return State{
-		Floor:       GetBottomFloor() - 1,
+		Floor:       config.GetBottomFloor() - 1,
 		IntendedDir: MD_Stop,
 		Behaviour:   EB_Idle,
 	}

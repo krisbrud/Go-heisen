@@ -1,13 +1,16 @@
 package delegator
 
 import (
+	"Go-heisen/src/config"
 	"Go-heisen/src/elevator"
 	"fmt"
+	"math"
 	"time"
 )
 
 const (
-	timeOut = 5 * time.Second
+	maxTimeSinceStateUpdate     = 5 * time.Second // Max time since we got an update from an elevator in order to delegate an order to it
+	stateRedistributionInterval = 500 * time.Millisecond
 )
 
 // Delegator chooses the best recipent for a order to be delegated or redelegated
@@ -23,7 +26,8 @@ func Delegator(
 	redelegations := make(map[elevator.OrderIDType]bool)
 	elevatorStates := make(map[string]elevator.State)
 
-	// TODO stateupdates
+	stateRedistributionTimer := time.NewTimer(stateRedistributionInterval)
+
 	for {
 		select {
 		case orderToDelegate := <-toDelegate:
@@ -31,22 +35,17 @@ func Delegator(
 			// orderToDelegate.Print()
 
 			// Find best recipent for order based on current belief state
-			recipent, err := bestRecipent(orderToDelegate, elevatorStates, "")
+			recipent := bestRecipent(orderToDelegate, elevatorStates, "")
 			orderToDelegate.RecipentID = recipent
 
-			// Doing order myself, but warn user? TODO fix this
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				break
-			}
 			toProcessor <- orderToDelegate
 			toOrderTransmitter <- orderToDelegate
 
 		case orderToRedelegate := <-toRedelegate:
 			// Redelegate the order if it isn't redelegated already
 			oldID := orderToRedelegate.OrderID
-			if _, alreadyRedelegating := redelegations[oldID]; alreadyRedelegating {
-				break
+			if _, isAlreadyRedelegated := redelegations[oldID]; isAlreadyRedelegated {
+				break // Don't redelegate the order, it already has been
 			}
 			// Set the order as being redelegated
 			redelegations[oldID] = true
@@ -54,18 +53,14 @@ func Delegator(
 			disallowedRecipent := orderToRedelegate.RecipentID
 			orderToRedelegate.OrderID = elevator.GetRandomID() // Give redelegation of order new ID
 
-			recipent, err := bestRecipent(orderToRedelegate, elevatorStates, disallowedRecipent)
+			recipent := bestRecipent(orderToRedelegate, elevatorStates, disallowedRecipent)
 			orderToRedelegate.RecipentID = recipent
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				break
-			}
 
 			toProcessor <- orderToRedelegate
 			toOrderTransmitter <- orderToRedelegate
 
 		case state := <-receiveState:
-			// fmt.Println("Received state from other elevator!")
+			fmt.Println("Received elevator state!")
 			// state.Print()
 			if !state.IsValid() {
 				fmt.Printf("Invalid state incoming!")
@@ -73,33 +68,25 @@ func Delegator(
 				break
 			}
 
-			//Making sure states are synced to local time.
+			// Make sure states are synced to local time.
 			state.Timestamp = time.Now()
 
-			// Notify other elevators about own state
-			if state.ElevatorID == elevator.GetElevatorID() {
-				oldElev, present := elevatorStates[state.ElevatorID]
-				if present {
-					if state != oldElev {
-						transmitState <- state
-					}
-				} else {
-					transmitState <- state
-				}
-			}
-			// TODO: Possibly add timestamp for state, only accept states that are
-			// recent enough. Then we may also get rid of the "peers variable" for simpler code.
 			elevatorStates[state.ElevatorID] = state
 
-			// DEBUG: Print all elevator states:
-			//fmt.Println("All elevator states after delegator update", elevatorStates)
+		case <-stateRedistributionTimer.C:
+			// Redistribute the state regularly, to combat lost packets with state updates
+			fmt.Println("Redistributing state!")
+			if state, ok := elevatorStates[config.GetMyElevatorID()]; ok {
+				go func() { transmitState <- state }()
+			}
+			stateRedistributionTimer.Reset(stateRedistributionInterval)
 		}
 	}
 }
 
-func bestRecipent(order elevator.Order, states map[string]elevator.State, disallowed string) (string, error) {
+func bestRecipent(order elevator.Order, states map[string]elevator.State, disallowed string) string {
 	bestElevatorID := ""
-	bestCost := 10000 // TODO: Refactor
+	bestCost := math.MaxInt64
 
 	// fmt.Printf("Finding best recipent for order %#v\n", order)
 	// fmt.Printf("Disallowed: %v\n", disallowed)
@@ -107,23 +94,23 @@ func bestRecipent(order elevator.Order, states map[string]elevator.State, disall
 
 	for elevatorID, state := range states {
 		stateCost := cost(order, state)
-		//Checking whether the elevator is still online and able to move. If no then no orders are delegated to it.
-		if time.Now().Sub(state.Timestamp) > timeOut {
-			fmt.Printf("cost was set to 10000")
-			stateCost = 10000
+
+		fmt.Printf("Cost for %v: %v\n", state, stateCost)
+		// Check that the state update is recent enough
+		if time.Since(state.Timestamp) > maxTimeSinceStateUpdate {
+			fmt.Println("State", state, "was too old while delegating")
+			continue // The state of this elevator is too old. Don't delegate to it.
 		}
-		fmt.Printf("Cost for %v: %v", elevatorID, stateCost)
 		if elevatorID != disallowed && stateCost < bestCost {
 			bestCost = stateCost
 			bestElevatorID = elevatorID
 		}
 	}
-	fmt.Println("")
 
 	if bestElevatorID == "" {
-		err := fmt.Errorf("Did not find any valid elevator to delegate to! Order %#v\nStates: %#v\nDissallowed: %#v", order, states, disallowed)
-		return elevator.GetElevatorID(), err
+		// Did for some reason not find any valid recipents. Set self as best recipent.
+		return config.GetMyElevatorID()
 	}
 
-	return bestElevatorID, nil
+	return bestElevatorID
 }

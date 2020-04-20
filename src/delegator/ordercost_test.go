@@ -7,29 +7,27 @@ import (
 )
 
 func TestCost(t *testing.T) {
-	elevator.SetMyElevatorID("SomeElevator")
-
 	// Cost from floor 1 to 3 while going up should be 2
 	order := getMockThirdFloorCabCall()
 	es := getMockElevatorStateFirstFloorUp()
 	correctCost := 2
-	if cost := Cost(order, es); cost != correctCost {
-		t.Errorf(makeCostErrorString(order, es, cost, correctCost))
+	if foundcost := cost(order, es); foundcost != correctCost {
+		t.Errorf(makeCostErrorString(order, es, foundcost, correctCost))
 	}
 
 	// Cost to third floor while standing still at the third floor should be zero
 	es = getMockElevatorStateAtThirdFloor()
 	correctCost = 0
-	if cost := Cost(order, es); cost != correctCost {
-		t.Errorf(makeCostErrorString(order, es, cost, correctCost))
+	if foundcost := cost(order, es); foundcost != correctCost {
+		t.Errorf(makeCostErrorString(order, es, foundcost, correctCost))
 	}
 
 	// Cost to third floor while standing still at the third floor should be zero
 	order = getMockFloorZeroCabUpOrder()
 	es = getMockElevatorStateFirstFloorUp()
 	correctCost = 5
-	if cost := Cost(order, es); cost != correctCost {
-		t.Errorf(makeCostErrorString(order, es, cost, correctCost))
+	if foundcost := cost(order, es); foundcost != correctCost {
+		t.Errorf(makeCostErrorString(order, es, foundcost, correctCost))
 	}
 
 }
