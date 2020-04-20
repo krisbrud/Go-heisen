@@ -75,7 +75,7 @@ func Controller(
 				doorTimer.Reset(doorDuration)
 				state.Behaviour = elevator.EB_DoorOpen
 
-				// Make orderprocessor the orders we have fulfilled
+				// Make OrderProcessor clear fulfilled orders (if any)
 				go func() { toArrivedFloorHandler <- state }()
 			}
 			go func() { stateUpdates <- state }()
